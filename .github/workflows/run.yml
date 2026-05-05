@@ -2,7 +2,7 @@ name: Auto Run Stock Script
 
 on:
   schedule:
-    - cron: "0 10 * * *"   # 台灣18:00
+    - cron: "0 13 * * *"   # 台灣 21:00
   workflow_dispatch:
 
 jobs:
@@ -26,7 +26,6 @@ jobs:
       - name: Run script
         run: python main.py
 
-      # 🔥 自動 commit + push
       - name: Commit files
         run: |
           git config --global user.name "github-actions"
