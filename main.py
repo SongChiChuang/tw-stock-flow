@@ -2,16 +2,17 @@ import requests
 import pandas as pd
 from io import StringIO
 from datetime import datetime
+import os
 
-# ========= 設定日期 =========
-date_str = "20260421"  # 之後可以改成自動
+# ========= 日期（自動抓今天）=========
+today_str = datetime.today().strftime("%Y%m%d")
 
-url = f"https://www.twse.com.tw/rwd/zh/fund/T86?date={date_str}&selectType=ALLBUT0999&response=csv"
+url = f"https://www.twse.com.tw/rwd/zh/fund/T86?date={today_str}&selectType=ALLBUT0999&response=csv"
 
 res = requests.get(url)
 text = res.text
 
-# ========= 清理CSV =========
+# ========= 清理 CSV =========
 lines = []
 for line in text.split("\n"):
     if "證券代號" in line or line.startswith('"'):
@@ -21,11 +22,11 @@ csv_data = "\n".join(lines)
 
 df = pd.read_csv(StringIO(csv_data))
 
-# ========= 存檔 =========
-today = datetime.today().strftime("%Y-%m-%d")
+# ========= 建資料夾 =========
+os.makedirs("data", exist_ok=True)
 
-filename = f"data_{today}.csv"
+# ========= 存檔 =========
+filename = f"data/{today_str}.csv"
 df.to_csv(filename, index=False)
 
-print("✅ 已成功執行並存檔:", filename)
-print(df.head())
+print("✅ 已儲存:", filename)
