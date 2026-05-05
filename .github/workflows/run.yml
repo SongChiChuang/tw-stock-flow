@@ -2,7 +2,8 @@ name: Auto Run Stock Script
 
 on:
   schedule:
-cron: "0 10 * * *"  workflow_dispatch:
+    - cron: "0 10 * * *"   # 台灣18:00
+  workflow_dispatch:
 
 jobs:
   run:
@@ -11,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          persist-credentials: true
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -22,3 +25,12 @@ jobs:
 
       - name: Run script
         run: python main.py
+
+      # 🔥 自動 commit + push
+      - name: Commit files
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add .
+          git commit -m "auto update data" || echo "No changes"
+          git push
