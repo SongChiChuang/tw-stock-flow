@@ -2,7 +2,7 @@ name: Auto Run Stock Script
 
 on:
   schedule:
-    - cron: "0 13 * * *"   # 台灣 21:00
+    - cron: "0 11 * * *"   # 台灣 19:00
   workflow_dispatch:
 
 jobs:
