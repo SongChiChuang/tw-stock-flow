@@ -5,21 +5,25 @@ from datetime import datetime
 import os
 import time
 import sys
+import re
 
-# ========= 時間設定 =========
+# =========================================
+# 時間設定
+# =========================================
 
 START_HOUR = 16
 END_HOUR = 21
 
-# 16:00~18:00 每30分鐘
 EARLY_INTERVAL = 1800
-
-# 18:00~21:00 每10分鐘
 LATE_INTERVAL = 600
 
-# ========= 日期 =========
+# =========================================
+# 日期
+# =========================================
 
-today_str = datetime.today().strftime("%Y%m%d")
+today = datetime.now()
+
+today_str = today.strftime("%Y%m%d")
 
 url = (
     "https://www.twse.com.tw/rwd/zh/fund/T86"
@@ -30,7 +34,51 @@ headers = {
     "User-Agent": "Mozilla/5.0"
 }
 
-# ========= 等待資料 =========
+# =========================================
+# Validation Report
+# =========================================
+
+validation_logs = []
+
+def add_pass(msg):
+
+    validation_logs.append(f"[PASS] {msg}")
+
+    print(f"✅ {msg}")
+
+def add_warning(msg):
+
+    validation_logs.append(f"[WARNING] {msg}")
+
+    print(f"⚠️ WARNING: {msg}")
+
+def add_fail(msg):
+
+    validation_logs.append(f"[FAIL] {msg}")
+
+    print(f"❌ FAIL: {msg}")
+
+    save_validation_report()
+
+    sys.exit(1)
+
+def save_validation_report():
+
+    os.makedirs("reports", exist_ok=True)
+
+    report_path = f"reports/{today_str}_validation.txt"
+
+    with open(
+        report_path,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        f.write("\n".join(validation_logs))
+
+# =========================================
+# 等待資料
+# =========================================
 
 text = None
 
@@ -40,13 +88,9 @@ while True:
 
     current_hour = now.hour
 
-    # ========= 超過21:00結束 =========
-
     if current_hour >= END_HOUR:
 
-        print("❌ 已超過21:00，今日資料仍未更新")
-
-        sys.exit(1)
+        add_fail("已超過21:00仍未取得資料")
 
     print(f"\n🔍 檢查時間: {now.strftime('%H:%M:%S')}")
 
@@ -64,14 +108,10 @@ while True:
 
         else:
 
-            # ========= cp950 解碼 =========
-
             text = res.content.decode(
                 "cp950",
                 errors="replace"
             )
-
-            # ========= 資料已更新 =========
 
             if "證券代號" in text:
 
@@ -85,23 +125,21 @@ while True:
 
         print(f"❌ 抓取失敗: {e}")
 
-    # ========= 動態等待 =========
-
     if current_hour < 18:
-
-        wait_time = EARLY_INTERVAL
 
         print("🕒 30分鐘後重試")
 
-    else:
+        time.sleep(EARLY_INTERVAL)
 
-        wait_time = LATE_INTERVAL
+    else:
 
         print("🕒 10分鐘後重試")
 
-    time.sleep(wait_time)
+        time.sleep(LATE_INTERVAL)
 
-# ========= 自動定位表頭 =========
+# =========================================
+# 定位表頭
+# =========================================
 
 lines = text.splitlines()
 
@@ -117,13 +155,13 @@ for i, line in enumerate(lines):
 
 if header_index is None:
 
-    print("❌ 找不到表頭")
-
-    sys.exit(1)
+    add_fail("找不到表頭")
 
 csv_text = "\n".join(lines[header_index:])
 
-# ========= CSV解析 =========
+# =========================================
+# CSV解析
+# =========================================
 
 try:
 
@@ -134,17 +172,21 @@ try:
         dtype=str
     )
 
+    add_pass("CSV解析成功")
+
 except Exception as e:
 
-    print(f"❌ CSV解析失敗: {e}")
+    add_fail(f"CSV解析失敗: {e}")
 
-    sys.exit(1)
-
-# ========= 移除空白列 =========
+# =========================================
+# 移除空白列
+# =========================================
 
 df = df.dropna(how="all")
 
-# ========= 驗證欄位 =========
+# =========================================
+# 欄位數驗證
+# =========================================
 
 expected_columns = len(df.columns)
 
@@ -152,19 +194,57 @@ for idx, row in df.iterrows():
 
     if len(row) != expected_columns:
 
-        print(f"❌ 欄位錯位: 第 {idx} 列")
+        add_fail(f"欄位錯位: 第 {idx} 列")
 
-        sys.exit(1)
+add_pass("欄位數一致")
 
-# ========= 清理欄位名稱 =========
+# =========================================
+# 清理欄位名稱
+# =========================================
 
 df.columns = [str(c).strip() for c in df.columns]
 
-# ========= 清理文字 =========
+# =========================================
+# 必要欄位驗證
+# =========================================
+
+required_columns = [
+
+    "證券代號",
+    "證券名稱",
+    "外陸資買賣超股數(不含外資自營商)",
+    "投信買賣超股數"
+
+]
+
+for col in required_columns:
+
+    if col not in df.columns:
+
+        add_fail(f"缺少必要欄位: {col}")
+
+add_pass("必要欄位完整")
+
+# =========================================
+# row count validation
+# =========================================
+
+row_count = len(df)
+
+if row_count < 1000:
+
+    add_fail(f"股票數量異常: {row_count}")
+
+add_pass(f"股票數量正常: {row_count}")
+
+# =========================================
+# 清理文字
+# =========================================
 
 def clean_text(x):
 
     if pd.isna(x):
+
         return ""
 
     x = str(x)
@@ -179,7 +259,47 @@ for col in df.columns:
 
     df[col] = df[col].apply(clean_text)
 
-# ========= 數值欄位 =========
+# =========================================
+# 股票代號格式驗證
+# =========================================
+
+stock_pattern = re.compile(r"^[0-9A-Z]{4,6}$")
+
+invalid_codes = []
+
+for code in df["證券代號"]:
+
+    if not stock_pattern.match(str(code)):
+
+        invalid_codes.append(code)
+
+if len(invalid_codes) > 0:
+
+    add_warning(
+        f"發現異常股票代號: {invalid_codes[:10]}"
+    )
+
+else:
+
+    add_pass("股票代號格式正常")
+
+# =========================================
+# duplicate驗證
+# =========================================
+
+duplicate_codes = df[
+    df["證券代號"].duplicated()
+]
+
+if len(duplicate_codes) > 0:
+
+    add_fail("發現重複股票代號")
+
+add_pass("無重複股票代號")
+
+# =========================================
+# 數值欄位
+# =========================================
 
 numeric_columns = [
 
@@ -209,11 +329,76 @@ for col in numeric_columns:
         errors="coerce"
     ).fillna(0)
 
-# ========= 建立資料夾 =========
+add_pass("數值欄位轉換完成")
+
+# =========================================
+# 異常值 Warning
+# =========================================
+
+warning_threshold = 300000000
+
+foreign_col = "外陸資買賣超股數(不含外資自營商)"
+
+abnormal_df = df[
+    abs(df[foreign_col]) > warning_threshold
+]
+
+if len(abnormal_df) > 0:
+
+    add_warning(
+        f"發現異常大買賣超股票數量: {len(abnormal_df)}"
+    )
+
+else:
+
+    add_pass("未發現異常大買賣超")
+
+# =========================================
+# 歷史row count比較
+# =========================================
+
+history_files = sorted(os.listdir("data")) if os.path.exists("data") else []
+
+if len(history_files) >= 1:
+
+    latest_file = history_files[-1]
+
+    try:
+
+        old_df = pd.read_csv(
+            f"data/{latest_file}"
+        )
+
+        old_count = len(old_df)
+
+        diff_ratio = abs(
+            row_count - old_count
+        ) / old_count
+
+        if diff_ratio > 0.2:
+
+            add_warning(
+                f"股票數量較前次變動超過20% "
+                f"(舊:{old_count} 新:{row_count})"
+            )
+
+        else:
+
+            add_pass("股票數量波動正常")
+
+    except:
+
+        add_warning("歷史資料比較失敗")
+
+# =========================================
+# 建立資料夾
+# =========================================
 
 os.makedirs("data", exist_ok=True)
 
-# ========= 存檔 =========
+# =========================================
+# 存檔
+# =========================================
 
 filename = f"data/{today_str}.csv"
 
@@ -223,10 +408,14 @@ df.to_csv(
     encoding="utf-8-sig"
 )
 
-print(f"\n✅ 已儲存: {filename}")
+add_pass(f"資料已儲存: {filename}")
+
+# =========================================
+# 儲存 validation report
+# =========================================
+
+save_validation_report()
 
 print("\n===================")
-print("資料驗證成功")
+print("Validation 完成")
 print("===================")
-
-print(df.head())
