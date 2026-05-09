@@ -6,7 +6,7 @@ from modules.validation import validate_dataframe
 # 測試資料路徑
 # =========================================
 
-TEST_FILE = "data/20260509.csv"
+TEST_FILE = "data/20260508.csv"
 
 # =========================================
 # 讀取測試資料
