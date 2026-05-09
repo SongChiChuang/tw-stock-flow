@@ -4,173 +4,76 @@ from io import StringIO
 from datetime import datetime
 import os
 import time
-import sys
 
 # ========= 日期 =========
-today_str = datetime.today().strftime("%Y%m%d")
+today = datetime.today()
+today_str = today.strftime("%Y%m%d")
 
-url = (
-    "https://www.twse.com.tw/rwd/zh/fund/T86"
-    f"?date={today_str}&selectType=ALLBUT0999&response=csv"
-)
+url = f"https://www.twse.com.tw/rwd/zh/fund/T86?date={today_str}&selectType=ALLBUT0999&response=csv"
 
-headers = {
-    "User-Agent": "Mozilla/5.0"
-}
+print(f"🚀 開始監控資料：{today_str}")
 
-# ========= 🔥 重試機制 =========
-text = None
+# ========= 監控邏輯 =========
+while True:
 
-for i in range(5):  # 最多5次
+    now = datetime.now()
+    hour = now.hour
 
-    print(f"🔍 第 {i+1} 次嘗試抓取資料...")
+    print(f"🕒 現在時間：{now.strftime('%H:%M:%S')}")
+    print("🔍 嘗試抓取資料...")
 
     try:
+        res = requests.get(url, timeout=30)
+        text = res.text
+    except Exception as e:
+        print("❌ 請求失敗：", e)
+        text = ""
 
-        res = requests.get(url, headers=headers, timeout=30)
+    # ========= 成功取得 =========
+    if "證券代號" in text:
 
-        if res.status_code != 200:
-            print(f"❌ HTTP錯誤: {res.status_code}")
+        print("✅ 資料已取得")
 
-        else:
+        # ========= 找表頭 =========
+        lines = text.split("\n")
 
-            # ========= 使用 cp950 解碼 =========
-            text = res.content.decode("cp950", errors="replace")
-
-            if "證券代號" in text:
-                print("✅ 資料已取得")
+        start = 0
+        for i, line in enumerate(lines):
+            if "證券代號" in line:
+                start = i
                 break
 
-            print("⏳ 資料尚未更新")
+        clean_data = "\n".join(lines[start:])
 
-    except Exception as e:
+        df = pd.read_csv(StringIO(clean_data))
 
-        print(f"❌ 抓取失敗: {e}")
+        # ========= 建資料夾 =========
+        os.makedirs("data", exist_ok=True)
 
-    # 最後一次不等待
-    if i < 4:
-        print("🕒 30分鐘後重試...")
-        time.sleep(1800)
+        # ========= 存檔 =========
+        filename = f"data/{today_str}.csv"
 
-else:
-    print("❌ 今日資料最終仍未更新")
-    sys.exit(1)
+        df.to_csv(filename, index=False)
 
-# ========= 自動定位表頭 =========
+        print(f"✅ 已儲存：{filename}")
 
-lines = text.splitlines()
+        print(df.head())
 
-header_index = None
-
-for i, line in enumerate(lines):
-
-    if "證券代號" in line and "證券名稱" in line:
-        header_index = i
         break
 
-if header_index is None:
-    print("❌ 找不到表頭")
-    sys.exit(1)
+    # ========= 超過21:00停止 =========
+    if hour >= 21:
+        print("❌ 已超過21:00，今日仍無資料")
+        break
 
-csv_text = "\n".join(lines[header_index:])
+    # ========= 分段等待 =========
+    if hour < 18:
+        wait_time = 1800   # 30分鐘
+        print("⏳ 16~18點區間，30分鐘後再試")
+    else:
+        wait_time = 600    # 10分鐘
+        print("⏳ 18~21點區間，10分鐘後再試")
 
-# ========= 正規 CSV 解析 =========
+    time.sleep(wait_time)
 
-try:
-
-    df = pd.read_csv(
-        StringIO(csv_text),
-        encoding="cp950",
-        thousands=",",
-        dtype=str
-    )
-
-except Exception as e:
-
-    print(f"❌ CSV解析失敗: {e}")
-    sys.exit(1)
-
-# ========= 移除空白列 =========
-
-df = df.dropna(how="all")
-
-# ========= 驗證欄位 =========
-
-expected_columns = len(df.columns)
-
-for idx, row in df.iterrows():
-
-    if len(row) != expected_columns:
-
-        print(f"❌ 欄位錯位: 第 {idx} 列")
-        sys.exit(1)
-
-# ========= 清理欄位名稱 =========
-
-df.columns = [str(c).strip() for c in df.columns]
-
-# ========= 清理文字 =========
-
-def clean_text(x):
-
-    if pd.isna(x):
-        return ""
-
-    x = str(x)
-
-    x = x.replace('="', '')
-    x = x.replace('"', '')
-    x = x.strip()
-
-    return x
-
-for col in df.columns:
-    df[col] = df[col].apply(clean_text)
-
-# ========= 數值欄位處理 =========
-
-numeric_columns = [
-    col for col in df.columns
-    if any(keyword in col for keyword in [
-        "買進股數",
-        "賣出股數",
-        "買賣超股數"
-    ])
-]
-
-for col in numeric_columns:
-
-    df[col] = (
-        df[col]
-        .astype(str)
-        .str.replace(",", "", regex=False)
-        .str.replace(" ", "", regex=False)
-        .replace("", "0")
-    )
-
-    df[col] = pd.to_numeric(
-        df[col],
-        errors="coerce"
-    ).fillna(0)
-
-# ========= 建立資料夾 =========
-
-os.makedirs("data", exist_ok=True)
-
-# ========= 存檔 =========
-
-filename = f"data/{today_str}.csv"
-
-df.to_csv(
-    filename,
-    index=False,
-    encoding="utf-8-sig"
-)
-
-print(f"✅ 已儲存: {filename}")
-
-print("\n===================")
-print("資料驗證成功")
-print("===================")
-
-print(df.head())
+print("🏁 程式結束")
