@@ -1,3 +1,8 @@
+from modules.fetch_twse import fetch_twse_data
+df = fetch_twse_data()
+
+print(df.head())
+
 import requests
 import pandas as pd
 from io import StringIO
