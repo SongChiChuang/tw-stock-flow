@@ -1,43 +1,56 @@
-name: Auto Run Stock Script
+name: Offline Test Workflow
 
 on:
-
-  schedule:
-
-    # 台灣16:00
-    - cron: "0 8 * * *"
 
   workflow_dispatch:
 
 jobs:
 
-  run:
+  test:
 
     runs-on: ubuntu-latest
 
-    timeout-minutes: 360
+    timeout-minutes: 30
 
     steps:
 
+      # ====================================
+      # Checkout Repository
+      # ====================================
+
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          persist-credentials: true
+
+      # ====================================
+      # Setup Python
+      # ====================================
 
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
+      # ====================================
+      # Install Dependencies
+      # ====================================
+
       - name: Install dependencies
         run: |
           pip install pandas
           pip install requests
 
-      - name: Run script
-        run: python main.py
+      # ====================================
+      # Run Offline Test
+      # ====================================
 
-      - name: Commit files
+      - name: Run test_main.py
+        run: python test_main.py
+
+      # ====================================
+      # Commit Reports
+      # ====================================
+
+      - name: Commit reports
         run: |
 
           git config --global user.name "github-actions"
@@ -47,6 +60,6 @@ jobs:
 
           git diff --cached --quiet && echo "No changes" && exit 0
 
-          git commit -m "auto update data"
+          git commit -m "offline validation test"
 
           git push
