@@ -8,7 +8,7 @@ import time
 import sys
 
 # =========================================
-# 時間設定 
+# 時間設定
 # =========================================
 
 START_HOUR = 16
@@ -135,7 +135,23 @@ def fetch_twse_data():
 
         sys.exit(1)
 
-    csv_text = "\n".join(lines[header_index:])
+    # =====================================
+    # 切除 footer 說明列
+    # =====================================
+
+    clean_lines = []
+
+    for line in lines[header_index:]:
+
+        # 遇到說明列直接停止
+
+        if line.startswith("說明"):
+
+            break
+
+        clean_lines.append(line)
+
+    csv_text = "\n".join(clean_lines)
 
     # =====================================
     # CSV解析
