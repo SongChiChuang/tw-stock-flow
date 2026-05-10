@@ -143,9 +143,17 @@ def fetch_twse_data():
 
     for line in lines[header_index:]:
 
-        # 遇到說明列直接停止
+        # 去除空白與引號
 
-        if line.startswith("說明"):
+        clean_line = (
+            line
+            .replace('"', '')
+            .strip()
+        )
+
+        # 遇到說明列停止
+
+        if "說明" in clean_line:
 
             break
 
