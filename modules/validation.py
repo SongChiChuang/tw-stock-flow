@@ -69,6 +69,10 @@ def save_validation_report(today_str=None):
 
 def validate_dataframe(df, today_str=None):
 
+    global validation_logs
+
+    validation_logs = []
+
     # =====================================
     # 欄位名稱清理
     # =====================================
@@ -100,6 +104,49 @@ def validate_dataframe(df, today_str=None):
     add_pass("必要欄位完整")
 
     # =====================================
+    # 股票代號格式驗證
+    # =====================================
+
+    stock_pattern = re.compile(
+        r"^[0-9A-Z]{4,6}$"
+    )
+
+    invalid_codes = []
+
+    valid_rows = []
+
+    for idx, code in enumerate(df["證券代號"]):
+
+        code_str = str(code).strip()
+
+        # 合法股票代號
+
+        if stock_pattern.match(code_str):
+
+            valid_rows.append(idx)
+
+        else:
+
+            invalid_codes.append(code_str)
+
+    # 只保留合法股票代號列
+
+    df = df.iloc[valid_rows].copy()
+
+    # Warning 顯示
+
+    if len(invalid_codes) > 0:
+
+        add_warning(
+            f"已移除異常股票代號: "
+            f"{invalid_codes[:10]}"
+        )
+
+    else:
+
+        add_pass("股票代號格式正常")
+
+    # =====================================
     # row count validation
     # =====================================
 
@@ -110,35 +157,6 @@ def validate_dataframe(df, today_str=None):
         add_fail(f"股票數量異常: {row_count}")
 
     add_pass(f"股票數量正常: {row_count}")
-
-    # =====================================
-    # 股票代號格式驗證
-    # =====================================
-
-    stock_pattern = re.compile(
-        r"^[0-9A-Z]{4,6}$"
-    )
-
-    invalid_codes = []
-
-    for code in df["證券代號"]:
-
-        if not stock_pattern.match(
-            str(code)
-        ):
-
-            invalid_codes.append(code)
-
-    if len(invalid_codes) > 0:
-
-        add_warning(
-            f"發現異常股票代號: "
-            f"{invalid_codes[:10]}"
-        )
-
-    else:
-
-        add_pass("股票代號格式正常")
 
     # =====================================
     # duplicate驗證
@@ -155,7 +173,7 @@ def validate_dataframe(df, today_str=None):
     add_pass("無重複股票代號")
 
     # =====================================
-    # 數值欄位
+    # 數值欄位轉換
     # =====================================
 
     numeric_columns = [
