@@ -27,7 +27,11 @@ from modules.heatmap import (
 )
 
 from modules.accumulation import (
-    load_recent_data
+
+    load_recent_data,
+
+    generate_foreign_accumulation
+
 )
 
 # =========================================
@@ -102,21 +106,21 @@ generate_trust_sell_top30(
 )
 
 # =========================================
-# Accumulation Test
+# Accumulation
 # =========================================
 
 recent_df = load_recent_data(
     days=10
 )
 
-print(
-    recent_df[
-        [
-            "證券代號",
-            "證券名稱",
-            "資料日期"
-        ]
-    ].head()
+generate_foreign_accumulation(
+
+    recent_df,
+
+    today_str,
+
+    min_buy_days=8
+
 )
 
 # =========================================
