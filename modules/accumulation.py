@@ -1,6 +1,10 @@
 import os
 import pandas as pd
 
+from utils.stock_filter import (
+    filter_stocks
+)
+
 # =========================================
 # 讀取最近 N 日資料
 # =========================================
@@ -55,6 +59,10 @@ def load_recent_data(days=10):
         try:
 
             df = pd.read_csv(filepath)
+
+            # 統一股票過濾
+
+            df = filter_stocks(df)
 
             # 加日期欄位
 
