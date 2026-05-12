@@ -4,6 +4,7 @@ from modules.fetch_twse import fetch_twse_data
 from modules.validation import validate_dataframe
 from modules.cleanup import cleanup_old_data
 from modules.heatmap import generate_foreign_buy_top30
+from modules.trading_calendar import is_trading_day
 
 # =========================================
 # 今日日期
@@ -12,6 +13,16 @@ from modules.heatmap import generate_foreign_buy_top30
 today_str = datetime.now().strftime(
     "%Y%m%d"
 )
+
+# =========================================
+# 交易日判斷
+# =========================================
+
+if not is_trading_day():
+
+    print("⏹️ 非交易日，結束系統")
+
+    exit()
 
 # =========================================
 # 抓取 TWSE 資料
