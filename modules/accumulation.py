@@ -13,15 +13,7 @@ def load_recent_data(days=10):
 
     print(f"\n📂 讀取最近 {days} 日資料")
 
-    # =====================================
-    # data資料夾
-    # =====================================
-
     data_folder = "data"
-
-    # =====================================
-    # 找csv
-    # =====================================
 
     csv_files = [
 
@@ -30,23 +22,11 @@ def load_recent_data(days=10):
         if f.endswith(".csv")
     ]
 
-    # =====================================
-    # 排序
-    # =====================================
-
     csv_files = sorted(csv_files)
-
-    # =====================================
-    # 取最近N日
-    # =====================================
 
     recent_files = csv_files[-days:]
 
     print(f"📅 使用資料: {recent_files}")
-
-    # =====================================
-    # 合併資料
-    # =====================================
 
     all_data = []
 
@@ -60,11 +40,11 @@ def load_recent_data(days=10):
 
             df = pd.read_csv(filepath)
 
-            # 統一股票過濾
+            # 股票過濾
 
             df = filter_stocks(df)
 
-            # 加日期欄位
+            # 日期欄位
 
             df["資料日期"] = (
                 file.replace(".csv", "")
@@ -80,10 +60,6 @@ def load_recent_data(days=10):
 
             print(e)
 
-    # =====================================
-    # 合併 dataframe
-    # =====================================
-
     combined_df = pd.concat(
         all_data,
         ignore_index=True
@@ -95,3 +71,121 @@ def load_recent_data(days=10):
     )
 
     return combined_df
+
+# =========================================
+# 外資持續買超
+# =========================================
+
+def generate_foreign_accumulation(
+    recent_df,
+    today_str,
+    min_buy_days=8
+):
+
+    print(
+        f"\n📊 外資連續買超分析 "
+        f"(>= {min_buy_days} 日)"
+    )
+
+    # =====================================
+    # 外資買超
+    # =====================================
+
+    foreign_col = (
+        "外陸資買賣超股數(不含外資自營商)"
+    )
+
+    buy_df = recent_df[
+        recent_df[foreign_col] > 0
+    ]
+
+    # =====================================
+    # groupby
+    # =====================================
+
+    grouped = (
+
+        buy_df.groupby(
+
+            [
+                "證券代號",
+                "證券名稱"
+            ]
+
+        )
+
+        ["資料日期"]
+
+        .nunique()
+
+        .reset_index()
+
+    )
+
+    # =====================================
+    # rename
+    # =====================================
+
+    grouped.columns = [
+
+        "證券代號",
+        "證券名稱",
+        "買超天數"
+
+    ]
+
+    # =====================================
+    # 條件
+    # =====================================
+
+    result_df = grouped[
+
+        grouped["買超天數"]
+        >= min_buy_days
+
+    ]
+
+    # =====================================
+    # 排序
+    # =====================================
+
+    result_df = result_df.sort_values(
+
+        by="買超天數",
+        ascending=False
+
+    )
+
+    # =====================================
+    # 建立資料夾
+    # =====================================
+
+    os.makedirs(
+        "reports/accumulation",
+        exist_ok=True
+    )
+
+    # =====================================
+    # 輸出
+    # =====================================
+
+    filename = (
+
+        f"reports/accumulation/"
+        f"{today_str}_foreign_accumulation.csv"
+
+    )
+
+    result_df.to_csv(
+
+        filename,
+
+        index=False,
+
+        encoding="utf-8-sig"
+
+    )
+
+    print(f"✅ 已輸出: {filename}")
+
+    print(result_df.head())
