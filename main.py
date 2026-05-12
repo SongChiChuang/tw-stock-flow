@@ -26,6 +26,10 @@ from modules.heatmap import (
 
 )
 
+from modules.accumulation import (
+    load_recent_data
+)
+
 # =========================================
 # 今日日期
 # =========================================
@@ -95,6 +99,24 @@ generate_trust_buy_top30(
 generate_trust_sell_top30(
     df,
     today_str
+)
+
+# =========================================
+# Accumulation Test
+# =========================================
+
+recent_df = load_recent_data(
+    days=10
+)
+
+print(
+    recent_df[
+        [
+            "證券代號",
+            "證券名稱",
+            "資料日期"
+        ]
+    ].head()
 )
 
 # =========================================
