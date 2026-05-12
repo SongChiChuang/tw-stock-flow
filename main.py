@@ -1,10 +1,30 @@
 from datetime import datetime
 
 from modules.fetch_twse import fetch_twse_data
-from modules.validation import validate_dataframe
-from modules.cleanup import cleanup_old_data
-from modules.heatmap import generate_foreign_buy_top30
-from modules.trading_calendar import is_trading_day
+
+from modules.validation import (
+    validate_dataframe
+)
+
+from modules.cleanup import (
+    cleanup_old_data
+)
+
+from modules.trading_calendar import (
+    is_trading_day
+)
+
+from modules.heatmap import (
+
+    generate_foreign_buy_top30,
+
+    generate_foreign_sell_top30,
+
+    generate_trust_buy_top30,
+
+    generate_trust_sell_top30
+
+)
 
 # =========================================
 # 今日日期
@@ -58,6 +78,21 @@ print(f"✅ 已儲存原始資料: {raw_filename}")
 # =========================================
 
 generate_foreign_buy_top30(
+    df,
+    today_str
+)
+
+generate_foreign_sell_top30(
+    df,
+    today_str
+)
+
+generate_trust_buy_top30(
+    df,
+    today_str
+)
+
+generate_trust_sell_top30(
     df,
     today_str
 )
