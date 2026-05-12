@@ -2,19 +2,9 @@ import os
 
 from utils.config import TOP_N
 
-# =========================================
-# ETF / 槓反過濾
-# =========================================
-
-ETF_KEYWORDS = [
-
-    "ETF",
-    "反1",
-    "反2",
-    "正2",
-    "槓桿"
-
-]
+from utils.stock_filter import (
+    filter_stocks
+)
 
 # =========================================
 # 共用 Heatmap Function
@@ -33,21 +23,10 @@ def generate_heatmap(
     print(f"\n📊 產生 {output_name}")
 
     # =====================================
-    # 排除 ETF / 槓反
+    # 統一股票過濾
     # =====================================
 
-    stock_df = df.copy()
-
-    for keyword in ETF_KEYWORDS:
-
-        stock_df = stock_df[
-            ~stock_df["證券名稱"]
-            .astype(str)
-            .str.contains(
-                keyword,
-                na=False
-            )
-        ]
+    stock_df = filter_stocks(df)
 
     # =====================================
     # 排序
