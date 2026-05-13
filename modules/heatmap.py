@@ -5,11 +5,15 @@ import pandas as pd
 def generate_heatmap(
     df,
     date_str=None,
-    category="foreign"
+    category="foreign",
+    mode=None
 ):
 
     if date_str is None:
         date_str = "unknown"
+
+    if mode is not None:
+        category = mode
 
     os.makedirs("reports/heatmap", exist_ok=True)
 
@@ -25,12 +29,18 @@ def generate_heatmap(
     )
 
     buy_top30 = (
-        df.sort_values(by=buy_col, ascending=False)
+        df.sort_values(
+            by=buy_col,
+            ascending=False
+        )
         .head(30)
     )
 
     sell_top30 = (
-        df.sort_values(by=buy_col, ascending=True)
+        df.sort_values(
+            by=buy_col,
+            ascending=True
+        )
         .head(30)
     )
 
