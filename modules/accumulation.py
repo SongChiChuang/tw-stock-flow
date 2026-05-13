@@ -1,221 +1,106 @@
-import os
 import pandas as pd
+import os
 
-from utils.stock_filter import (
-    filter_stocks
-)
 
-# =========================================
-# 讀取最近 N 日資料
-# =========================================
+def generate_accumulation(min_days=5):
 
-def load_recent_data(days=10):
+    print(f"📈 外資連續買超分析（>= {min_days} 日）")
 
-    print(f"\n📂 讀取最近 {days} 日資料")
+    data_dir = "data"
 
-    data_folder = "data"
-
-    csv_files = [
-
-        f for f in os.listdir(data_folder)
-
+    csv_files = sorted([
+        f for f in os.listdir(data_dir)
         if f.endswith(".csv")
+    ])
+
+    csv_files = csv_files[-5:]
+
+    print(f"📂 使用資料: {csv_files}")
+
+    dfs = []
+
+    for file in csv_files:
+
+        path = os.path.join(data_dir, file)
+
+        df = pd.read_csv(path)
+
+        df["資料日期"] = file.replace(".csv", "")
+
+        dfs.append(df)
+
+        print(f"✅ 已讀取: {file}")
+
+    combined = pd.concat(dfs)
+
+    print(f"✅ 合併完成（總筆數: {len(combined)}）")
+
+    # =========================
+    # 外資買賣超欄位
+    # =========================
+
+    target_col = "外陸資買賣超股數(不含外資自營商)"
+
+    if target_col not in combined.columns:
+
+        print("❌ 找不到外資買賣超欄位")
+        return
+
+    combined[target_col] = (
+        combined[target_col]
+        .astype(str)
+        .str.replace(",", "", regex=False)
+    )
+
+    combined[target_col] = pd.to_numeric(
+        combined[target_col],
+        errors="coerce"
+    ).fillna(0)
+
+    # =========================
+    # 每日外資 > 0
+    # =========================
+
+    positive = combined[
+        combined[target_col] > 0
     ]
 
-    csv_files = sorted(csv_files)
+    grouped = positive.groupby(
+        ["證券代號", "證券名稱"]
+    ).size().reset_index(name="買超天數")
 
-    recent_files = csv_files[-days:]
-
-    print(f"📅 使用資料: {recent_files}")
-
-    all_data = []
-
-    for file in recent_files:
-
-        filepath = (
-            f"{data_folder}/{file}"
-        )
-
-        try:
-
-            df = pd.read_csv(filepath)
-
-            # =====================================
-            # 數值欄位轉換
-            # =====================================
-
-            numeric_columns = [
-
-                "外陸資買賣超股數(不含外資自營商)",
-
-                "投信買賣超股數"
-
-            ]
-
-            for col in numeric_columns:
-
-                df[col] = (
-
-                    df[col]
-
-                    .astype(str)
-
-                    .str.replace(",", "")
-
-                    .astype(float)
-
-                )
-
-            # =====================================
-            # 股票過濾
-            # =====================================
-
-            df = filter_stocks(df)
-
-            # =====================================
-            # 日期欄位
-            # =====================================
-
-            df["資料日期"] = (
-                file.replace(".csv", "")
-            )
-
-            all_data.append(df)
-
-            print(f"✅ 已讀取: {file}")
-
-        except Exception as e:
-
-            print(f"❌ 讀取失敗: {file}")
-
-            print(e)
-
-    combined_df = pd.concat(
-        all_data,
-        ignore_index=True
-    )
-
-    print(
-        f"✅ 合併完成 "
-        f"(總筆數: {len(combined_df)})"
-    )
-
-    return combined_df
-
-# =========================================
-# 外資持續買超
-# =========================================
-
-def generate_foreign_accumulation(
-    recent_df,
-    today_str,
-    min_buy_days=8
-):
-
-    print(
-        f"\n📊 外資連續買超分析 "
-        f"(>= {min_buy_days} 日)"
-    )
-
-    # =====================================
-    # 外資買超
-    # =====================================
-
-    foreign_col = (
-        "外陸資買賣超股數(不含外資自營商)"
-    )
-
-    buy_df = recent_df[
-        recent_df[foreign_col] > 0
+    result = grouped[
+        grouped["買超天數"] >= min_days
     ]
 
-    # =====================================
-    # groupby
-    # =====================================
-
-    grouped = (
-
-        buy_df.groupby(
-
-            [
-                "證券代號",
-                "證券名稱"
-            ]
-
-        )
-
-        ["資料日期"]
-
-        .nunique()
-
-        .reset_index()
-
-    )
-
-    # =====================================
-    # rename
-    # =====================================
-
-    grouped.columns = [
-
-        "證券代號",
-        "證券名稱",
-        "買超天數"
-
-    ]
-
-    # =====================================
-    # 條件
-    # =====================================
-
-    result_df = grouped[
-
-        grouped["買超天數"]
-        >= min_buy_days
-
-    ]
-
-    # =====================================
-    # 排序
-    # =====================================
-
-    result_df = result_df.sort_values(
-
+    result = result.sort_values(
         by="買超天數",
         ascending=False
-
     )
 
-    # =====================================
-    # 建立資料夾
-    # =====================================
-
-    os.makedirs(
-        "reports/accumulation",
-        exist_ok=True
-    )
-
-    # =====================================
+    # =========================
     # 輸出
-    # =====================================
+    # =========================
 
-    filename = (
+    latest_date = csv_files[-1].replace(".csv", "")
 
-        f"reports/accumulation/"
-        f"{today_str}_foreign_accumulation.csv"
+    output_dir = "reports/accumulation"
 
+    os.makedirs(output_dir, exist_ok=True)
+
+    output_path = os.path.join(
+        output_dir,
+        f"{latest_date}_foreign_accumulation.csv"
     )
 
-    result_df.to_csv(
-
-        filename,
-
+    result.to_csv(
+        output_path,
         index=False,
-
         encoding="utf-8-sig"
-
     )
 
-    print(f"✅ 已輸出: {filename}")
+    print(f"✅ 已輸出: {output_path}")
 
-    print(result_df.head())
+    print(result.head())
+
+    return result
