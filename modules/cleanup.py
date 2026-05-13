@@ -1,114 +1,39 @@
 import os
-import shutil
-import zipfile
+import glob
 
-from datetime import datetime
 
-# =========================================
-# 設定
-# =========================================
+def cleanup_old_files(keep=5):
 
-DATA_FOLDER = "data"
+    print("🧹 開始資料清理")
 
-ARCHIVE_FOLDER = "archive"
+    data_dir = "data"
 
-KEEP_DAYS = 30
-
-# =========================================
-# cleanup function
-# =========================================
-
-def cleanup_old_data():
-
-    print("\n🧹 開始資料清理")
-
-    # 建立 archive 資料夾
-
-    os.makedirs(
-        ARCHIVE_FOLDER,
-        exist_ok=True
+    csv_files = sorted(
+        glob.glob(os.path.join(data_dir, "*.csv"))
     )
 
-    # 取得 data 內所有 csv
+    if len(csv_files) <= keep:
 
-    files = [
+        print(f"✅ cleanup完成（封存 0 個檔案）")
+        return
 
-        f for f in os.listdir(DATA_FOLDER)
+    remove_files = csv_files[:-keep]
 
-        if f.endswith(".csv")
-    ]
+    archive_dir = "archive"
 
-    now = datetime.now()
+    os.makedirs(archive_dir, exist_ok=True)
 
-    moved_count = 0
+    for file in remove_files:
 
-    for file in files:
+        filename = os.path.basename(file)
 
-        try:
+        target = os.path.join(
+            archive_dir,
+            filename
+        )
 
-            # 解析日期
+        os.rename(file, target)
 
-            date_str = file.replace(".csv", "")
+        print(f"📦 已封存: {filename}")
 
-            file_date = datetime.strptime(
-                date_str,
-                "%Y%m%d"
-            )
-
-            diff_days = (
-                now - file_date
-            ).days
-
-            # 超過 KEEP_DAYS
-
-            if diff_days > KEEP_DAYS:
-
-                src_path = (
-                    f"{DATA_FOLDER}/{file}"
-                )
-
-                # zip名稱
-
-                zip_name = (
-                    f"{date_str}.zip"
-                )
-
-                zip_path = (
-                    f"{ARCHIVE_FOLDER}/{zip_name}"
-                )
-
-                # 建立zip
-
-                with zipfile.ZipFile(
-                    zip_path,
-                    "w",
-                    zipfile.ZIP_DEFLATED
-                ) as zipf:
-
-                    zipf.write(
-                        src_path,
-                        arcname=file
-                    )
-
-                # 刪除原csv
-
-                os.remove(src_path)
-
-                moved_count += 1
-
-                print(
-                    f"📦 已封存: {file}"
-                )
-
-        except Exception as e:
-
-            print(
-                f"⚠️ cleanup失敗: {file}"
-            )
-
-            print(e)
-
-    print(
-        f"\n✅ cleanup完成 "
-        f"(封存 {moved_count} 個檔案)"
-    )
+    print(f"✅ cleanup完成（封存 {len(remove_files)} 個檔案）")
