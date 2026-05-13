@@ -1,20 +1,23 @@
 name: Auto Run Stock System
 
 on:
-  workflow_dispatch:
-
   schedule:
-    - cron: "20 7 * * 1-5"
+    - cron: "30 6 * * 1-5"
+
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+
   run:
+
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -24,20 +27,26 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pandas requests numpy
+          pip install pandas requests openpyxl
 
       - name: Run main.py
-        run: python main.py
+        env:
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+
+        run: |
+          python main.py
 
       - name: Commit files
         run: |
+
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
 
+          git pull origin main --rebase
+
           git add .
 
-          git diff --cached --quiet || git commit -m "auto update stock data"
-
-          git pull --rebase origin main
+          git commit -m "auto update stock data" || echo "No changes"
 
           git push
