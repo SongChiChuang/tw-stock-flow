@@ -1,5 +1,5 @@
 from modules.fetch_twse import fetch_twse_data
-from modules.validation import validate_data
+from modules.validation import run_validation
 from modules.heatmap import generate_heatmap
 from modules.accumulation import generate_accumulation
 from modules.cleanup import cleanup_old_files
@@ -30,7 +30,7 @@ def main():
     # 驗證
     # =========================
 
-    validate_data(df)
+    run_validation(df)
 
     print("====================")
     print("Validation 完成")
