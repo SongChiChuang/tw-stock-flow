@@ -19,7 +19,6 @@ def generate_heatmap(
 
     df.columns = df.columns.str.strip()
 
-    # 自動判斷欄位名稱
     possible_cols = [
         "買賣超股數",
         "買賣超",
@@ -39,12 +38,19 @@ def generate_heatmap(
             f"找不到買賣超欄位，目前欄位：{list(df.columns)}"
         )
 
+    # 修正數值格式
     df[buy_col] = (
         df[buy_col]
         .astype(str)
-        .str.replace(",", "")
-        .astype(int)
+        .str.replace(",", "", regex=False)
+        .str.replace(".0", "", regex=False)
+        .str.strip()
     )
+
+    df[buy_col] = pd.to_numeric(
+        df[buy_col],
+        errors="coerce"
+    ).fillna(0)
 
     buy_top30 = (
         df.sort_values(
