@@ -19,7 +19,25 @@ def generate_heatmap(
 
     df.columns = df.columns.str.strip()
 
-    buy_col = "買賣超股數"
+    # 自動判斷欄位名稱
+    possible_cols = [
+        "買賣超股數",
+        "買賣超",
+        "外資買賣超股數",
+        "投信買賣超股數"
+    ]
+
+    buy_col = None
+
+    for col in possible_cols:
+        if col in df.columns:
+            buy_col = col
+            break
+
+    if buy_col is None:
+        raise Exception(
+            f"找不到買賣超欄位，目前欄位：{list(df.columns)}"
+        )
 
     df[buy_col] = (
         df[buy_col]
