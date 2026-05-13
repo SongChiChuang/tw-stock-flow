@@ -2,7 +2,11 @@ import os
 import pandas as pd
 
 
-def generate_heatmap(df, date_str=None):
+def generate_heatmap(
+    df,
+    date_str=None,
+    category="foreign"
+):
 
     if date_str is None:
         date_str = "unknown"
@@ -20,28 +24,38 @@ def generate_heatmap(df, date_str=None):
         .astype(int)
     )
 
-    foreign_buy = (
+    buy_top30 = (
         df.sort_values(by=buy_col, ascending=False)
         .head(30)
     )
 
-    foreign_sell = (
+    sell_top30 = (
         df.sort_values(by=buy_col, ascending=True)
         .head(30)
     )
 
-    foreign_buy.to_csv(
-        f"reports/heatmap/{date_str}_foreign_buy_30.csv",
+    buy_path = (
+        f"reports/heatmap/"
+        f"{date_str}_{category}_buy_30.csv"
+    )
+
+    sell_path = (
+        f"reports/heatmap/"
+        f"{date_str}_{category}_sell_30.csv"
+    )
+
+    buy_top30.to_csv(
+        buy_path,
         index=False,
         encoding="utf-8-sig"
     )
 
-    print("📊 產生 foreign_buy_30")
+    print(f"📊 產生 {category}_buy_30")
 
-    foreign_sell.to_csv(
-        f"reports/heatmap/{date_str}_foreign_sell_30.csv",
+    sell_top30.to_csv(
+        sell_path,
         index=False,
         encoding="utf-8-sig"
     )
 
-    print("📊 產生 foreign_sell_30")
+    print(f"📊 產生 {category}_sell_30")
