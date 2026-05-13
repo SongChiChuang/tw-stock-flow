@@ -1,132 +1,129 @@
-from datetime import datetime
-
 from modules.fetch_twse import fetch_twse_data
+from modules.validation import validate_data
+from modules.heatmap import generate_heatmap
+from modules.accumulation import generate_accumulation
+from modules.cleanup import cleanup_old_files
+from modules.trading_calendar import is_trading_day
 
-from modules.validation import (
-    validate_dataframe
-)
+from utils.line_notify import send_line_message
 
-from modules.cleanup import (
-    cleanup_old_data
-)
+import os
 
-from modules.trading_calendar import (
-    is_trading_day
-)
 
-from modules.heatmap import (
+def main():
 
-    generate_foreign_buy_top30,
+    if not is_trading_day():
+        print("今日非交易日")
+        return
 
-    generate_foreign_sell_top30,
+    print("今日為交易日")
 
-    generate_trust_buy_top30,
+    # =========================
+    # 抓資料
+    # =========================
 
-    generate_trust_sell_top30
+    df, date_str = fetch_twse_data()
 
-)
+    print(f"已儲存原始資料: data/{date_str}.csv")
 
-from modules.accumulation import (
+    # =========================
+    # 驗證
+    # =========================
 
-    load_recent_data,
+    validate_data(df)
 
-    generate_foreign_accumulation
+    print("====================")
+    print("Validation 完成")
+    print("====================")
 
-)
+    # =========================
+    # Heatmap
+    # =========================
 
-# =========================================
-# 今日日期
-# =========================================
+    print("📊 產生 foreign_buy_30")
 
-today_str = datetime.now().strftime(
-    "%Y%m%d"
-)
+    generate_heatmap(
+        df=df,
+        date_str=date_str,
+        category="foreign",
+        mode="buy"
+    )
 
-# =========================================
-# 交易日判斷
-# =========================================
+    print("📊 產生 foreign_sell_30")
 
-if not is_trading_day():
+    generate_heatmap(
+        df=df,
+        date_str=date_str,
+        category="foreign",
+        mode="sell"
+    )
 
-    print("⏹️ 非交易日，結束系統")
+    print("📊 產生 trust_buy_30")
 
-    exit()
+    generate_heatmap(
+        df=df,
+        date_str=date_str,
+        category="trust",
+        mode="buy"
+    )
 
-# =========================================
-# 抓取 TWSE 資料
-# =========================================
+    print("📊 產生 trust_sell_30")
 
-df = fetch_twse_data()
+    generate_heatmap(
+        df=df,
+        date_str=date_str,
+        category="trust",
+        mode="sell"
+    )
 
-# =========================================
-# Validation
-# =========================================
+    # =========================
+    # Accumulation
+    # =========================
 
-df = validate_dataframe(
-    df,
-    today_str=today_str
-)
+    print("📈 外資連續買超分析（>= 5 日）")
 
-# =========================================
-# 儲存原始資料
-# =========================================
+    generate_accumulation(
+        min_days=5
+    )
 
-raw_filename = f"data/{today_str}.csv"
+    # =========================
+    # Cleanup
+    # =========================
 
-df.to_csv(
-    raw_filename,
-    index=False,
-    encoding="utf-8-sig"
-)
+    print("🧹 開始資料清理")
 
-print(f"✅ 已儲存原始資料: {raw_filename}")
+    cleanup_old_files()
 
-# =========================================
-# Heatmap
-# =========================================
+    print("✅ cleanup完成（封存 0 個檔案）")
 
-generate_foreign_buy_top30(
-    df,
-    today_str
-)
+    # =========================
+    # LINE 推播
+    # =========================
 
-generate_foreign_sell_top30(
-    df,
-    today_str
-)
+    token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
+    user_id = os.getenv("LINE_USER_ID")
 
-generate_trust_buy_top30(
-    df,
-    today_str
-)
+    dashboard_url = "https://songchichuang.github.io/tw-stock-flow/"
 
-generate_trust_sell_top30(
-    df,
-    today_str
-)
+    message = f"""
+TW Stock Flow 更新完成
 
-# =========================================
-# Accumulation
-# =========================================
+資料日期：{date_str}
 
-recent_df = load_recent_data(
-    days=10
-)
+Dashboard：
+{dashboard_url}
+"""
 
-generate_foreign_accumulation(
+    send_line_message(
+        token=token,
+        user_id=user_id,
+        message=message
+    )
 
-    recent_df,
+    print("📨 LINE 通知已送出")
 
-    today_str,
+    print("🎉 main.py 執行完成")
 
-    min_buy_days=8
 
-)
-
-# =========================================
-# Cleanup
-# =========================================
-
-cleanup_old_data()
-
-print("\n🎉 main.py 執行完成")
+if __name__ == "__main__":
+    main()
