@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TW Stock Flow Dashboard</title>
+
+    <style>
+        body{
+            font-family: Arial, sans-serif;
+            background-color:#111;
+            color:white;
+            margin:0;
+            padding:20px;
+        }
+
+        h1{
+            color:#00ff99;
+        }
+
+        .card{
+            background:#1c1c1c;
+            padding:20px;
+            border-radius:12px;
+            margin-bottom:20px;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+        }
+
+        th, td{
+            padding:12px;
+            border-bottom:1px solid #333;
+            text-align:left;
+        }
+
+        th{
+            color:#00ff99;
+        }
+
+        tr:hover{
+            background:#2a2a2a;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>TW Stock Flow Dashboard</h1>
+
+    <div class="card">
+        <h2>Heatmap</h2>
+
+        <table>
+            <tr>
+                <th>排名</th>
+                <th>股票代號</th>
+                <th>股票名稱</th>
+                <th>買賣超</th>
+            </tr>
+
+            <tr>
+                <td>1</td>
+                <td>2330</td>
+                <td>台積電</td>
+                <td>+12000</td>
+            </tr>
+
+            <tr>
+                <td>2</td>
+                <td>2317</td>
+                <td>鴻海</td>
+                <td>+8500</td>
+            </tr>
+
+        </table>
+    </div>
+
+</body>
+</html>
