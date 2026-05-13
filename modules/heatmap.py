@@ -1,174 +1,47 @@
 import os
+import pandas as pd
 
-from utils.config import TOP_N
 
-from utils.stock_filter import (
-    filter_stocks
-)
+def generate_heatmap(df, date_str=None):
 
-# =========================================
-# 共用 Heatmap Function
-# =========================================
+    if date_str is None:
+        date_str = "unknown"
 
-def generate_heatmap(
+    os.makedirs("reports/heatmap", exist_ok=True)
 
-    df,
-    today_str,
-    column_name,
-    output_name,
-    ascending=False
+    df.columns = df.columns.str.strip()
 
-):
+    buy_col = "買賣超股數"
 
-    print(f"\n📊 產生 {output_name}")
-
-    # =====================================
-    # 統一股票過濾
-    # =====================================
-
-    stock_df = filter_stocks(df)
-
-    # =====================================
-    # 排序
-    # =====================================
-
-    stock_df = stock_df.sort_values(
-        by=column_name,
-        ascending=ascending
+    df[buy_col] = (
+        df[buy_col]
+        .astype(str)
+        .str.replace(",", "")
+        .astype(int)
     )
 
-    # =====================================
-    # Top N
-    # =====================================
-
-    top_n = stock_df.head(TOP_N)
-
-    # =====================================
-    # 輸出欄位
-    # =====================================
-
-    output_df = top_n[[
-
-        "證券代號",
-        "證券名稱",
-        column_name
-
-    ]]
-
-    # =====================================
-    # 建立資料夾
-    # =====================================
-
-    os.makedirs(
-        "reports/heatmap",
-        exist_ok=True
+    foreign_buy = (
+        df.sort_values(by=buy_col, ascending=False)
+        .head(30)
     )
 
-    # =====================================
-    # 存檔
-    # =====================================
-
-    filename = (
-        f"reports/heatmap/"
-        f"{today_str}_{output_name}.csv"
+    foreign_sell = (
+        df.sort_values(by=buy_col, ascending=True)
+        .head(30)
     )
 
-    output_df.to_csv(
-        filename,
+    foreign_buy.to_csv(
+        f"reports/heatmap/{date_str}_foreign_buy_30.csv",
         index=False,
         encoding="utf-8-sig"
     )
 
-    print(f"✅ 已輸出: {filename}")
+    print("📊 產生 foreign_buy_30")
 
-# =========================================
-# 外資買超
-# =========================================
-
-def generate_foreign_buy_top30(
-    df,
-    today_str
-):
-
-    generate_heatmap(
-
-        df=df,
-
-        today_str=today_str,
-
-        column_name=(
-            "外陸資買賣超股數(不含外資自營商)"
-        ),
-
-        output_name="foreign_buy_30",
-
-        ascending=False
+    foreign_sell.to_csv(
+        f"reports/heatmap/{date_str}_foreign_sell_30.csv",
+        index=False,
+        encoding="utf-8-sig"
     )
 
-# =========================================
-# 外資賣超
-# =========================================
-
-def generate_foreign_sell_top30(
-    df,
-    today_str
-):
-
-    generate_heatmap(
-
-        df=df,
-
-        today_str=today_str,
-
-        column_name=(
-            "外陸資買賣超股數(不含外資自營商)"
-        ),
-
-        output_name="foreign_sell_30",
-
-        ascending=True
-    )
-
-# =========================================
-# 投信買超
-# =========================================
-
-def generate_trust_buy_top30(
-    df,
-    today_str
-):
-
-    generate_heatmap(
-
-        df=df,
-
-        today_str=today_str,
-
-        column_name="投信買賣超股數",
-
-        output_name="trust_buy_30",
-
-        ascending=False
-    )
-
-# =========================================
-# 投信賣超
-# =========================================
-
-def generate_trust_sell_top30(
-    df,
-    today_str
-):
-
-    generate_heatmap(
-
-        df=df,
-
-        today_str=today_str,
-
-        column_name="投信買賣超股數",
-
-        output_name="trust_sell_30",
-
-        ascending=True
-    )
+    print("📊 產生 foreign_sell_30")
