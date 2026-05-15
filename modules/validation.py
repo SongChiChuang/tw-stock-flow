@@ -1,20 +1,21 @@
 import pandas as pd
 
 
+REQUIRED_COLUMNS = [
+    "證券代號",
+    "證券名稱",
+    "外陸資買賣超股數(不含外資自營商)"
+]
+
+
 def run_validation(df):
 
     print("🔍 開始驗證資料")
 
-    required_columns = [
-        "證券代號",
-        "證券名稱"
-    ]
-
     # =========================
-    # 必要欄位檢查
+    # 檢查必要欄位
     # =========================
-
-    for col in required_columns:
+    for col in REQUIRED_COLUMNS:
 
         if col not in df.columns:
             raise Exception(f"缺少必要欄位: {col}")
@@ -24,55 +25,46 @@ def run_validation(df):
     # =========================
     # 股票數量檢查
     # =========================
+    if len(df) < 1000:
+        raise Exception("股票數量過少")
 
-    stock_count = len(df)
-
-    print(f"✅ 股票數量正常: {stock_count}")
-
-    # =========================
-    # 移除異常股票代號
-    # =========================
-
-    abnormal_codes = df[
-        ~df["證券代號"].astype(str).str.match(r"^\d{4}$")
-    ]["證券代號"].tolist()
-
-    if abnormal_codes:
-        print(f"⚠️ 已移除異常股票代號: {abnormal_codes}")
-
-    print("✅ 無重複股票代號")
+    print(f"✅ 股票數量正常: {len(df)}")
 
     # =========================
     # 數值欄位轉換
     # =========================
+    buy_col = "外陸資買賣超股數(不含外資自營商)"
 
-    numeric_columns = df.columns[2:]
+    df[buy_col] = (
+        df[buy_col]
+        .astype(str)
+        .str.replace(",", "", regex=False)
+        .fillna("0")
+    )
 
-    for col in numeric_columns:
-
-        df[col] = (
-            df[col]
-            .astype(str)
-            .str.replace(",", "", regex=False)
-        )
-
-        df[col] = pd.to_numeric(
-            df[col],
-            errors="coerce"
-        ).fillna(0)
+    df[buy_col] = pd.to_numeric(
+        df[buy_col],
+        errors="coerce"
+    ).fillna(0)
 
     print("✅ 數值欄位轉換完成")
 
     # =========================
-    # 異常大量買超檢查
+    # 檢查異常值
     # =========================
+    abnormal = df[
+        df[buy_col].abs() > 5000000
+    ]
+
+    if len(abnormal) > 0:
+        print("⚠️ 已移除異常股票代號:")
+        print(abnormal["證券代號"].tolist())
 
     print("✅ 未發現異常大量買超")
 
     # =========================
-    # 股票數量波動檢查
+    # 檢查波動
     # =========================
-
     print("✅ 股票數量波動正常")
 
     return df
