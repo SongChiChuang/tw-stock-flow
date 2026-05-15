@@ -1,206 +1,129 @@
+
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>TW Stock Flow Dashboard</title>
+<meta charset="UTF-8">
 
-    <style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        body{
-            background:#0d1117;
-            color:white;
-            font-family:Arial;
-            margin:0;
-            padding:20px;
-        }
+<title>TW Stock Flow Dashboard</title>
 
-        h1{
-            color:#00ff99;
-        }
+<style>
 
-        h2{
-            margin-top:40px;
-            color:#ffffff;
-        }
+body {
+    background: #050816;
+    color: white;
+    font-family: Arial;
+    margin: 0;
+    padding: 20px;
+}
 
-        .card{
-            background:#161b22;
-            border-radius:16px;
-            padding:20px;
-            margin-bottom:30px;
-        }
+h1 {
+    color: #00ff99;
+    font-size: 56px;
+    margin-bottom: 10px;
+}
 
-        table{
-            width:100%;
-            border-collapse:collapse;
-        }
+.subtitle {
+    color: #888;
+    margin-bottom: 40px;
+}
 
-        th{
-            color:#00ff99;
-            border-bottom:1px solid #333;
-            padding:12px;
-            text-align:left;
-        }
+.card {
+    background: #111827;
+    border-radius: 24px;
+    padding: 24px;
+    margin-bottom: 40px;
+    overflow-x: auto;
+}
 
-        td{
-            padding:12px;
-            border-bottom:1px solid #222;
-        }
+h2 {
+    font-size: 42px;
+    margin-bottom: 24px;
+}
 
-        tr:hover{
-            background:#1f2937;
-        }
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
 
-        .update-time{
-            color:#888;
-            margin-bottom:30px;
-        }
+th {
+    color: #00ff99;
+    font-size: 28px;
+    padding: 18px;
+    border-bottom: 1px solid #333;
+}
 
-    </style>
+td {
+    padding: 20px;
+    text-align: center;
+    border-bottom: 1px solid #222;
+    font-size: 28px;
+}
+
+@media screen and (max-width: 768px) {
+
+    h1 {
+        font-size: 28px;
+    }
+
+    h2 {
+        font-size: 22px;
+    }
+
+    th {
+        font-size: 16px;
+        padding: 10px;
+    }
+
+    td {
+        font-size: 16px;
+        padding: 12px;
+    }
+
+}
+
+</style>
+
 </head>
 
 <body>
 
-    <h1>TW Stock Flow Dashboard</h1>
+<h1>TW Stock Flow Dashboard</h1>
 
-    <div class="update-time">
-        每日自動更新
-    </div>
+<div class="subtitle">
+每日自動更新
+</div>
 
-    <!-- 外資買超 -->
-    <div class="card">
-        <h2>外資買超 TOP30</h2>
 
-        <table id="foreign-buy-table">
-            <thead>
-                <tr>
-                    <th>排名</th>
-                    <th>股票代號</th>
-                    <th>股票名稱</th>
-                    <th>買賣超</th>
-                </tr>
-            </thead>
+        <div class="card">
+            <h2>外資買超 TOP30</h2>
+            <p>無資料</p>
+        </div>
+        
 
-            <tbody></tbody>
-        </table>
-    </div>
 
-    <!-- 外資賣超 -->
-    <div class="card">
-        <h2>外資賣超 TOP30</h2>
+        <div class="card">
+            <h2>外資賣超 TOP30</h2>
+            <p>無資料</p>
+        </div>
+        
 
-        <table id="foreign-sell-table">
-            <thead>
-                <tr>
-                    <th>排名</th>
-                    <th>股票代號</th>
-                    <th>股票名稱</th>
-                    <th>買賣超</th>
-                </tr>
-            </thead>
 
-            <tbody></tbody>
-        </table>
-    </div>
+        <div class="card">
+            <h2>投信買超 TOP30</h2>
+            <p>無資料</p>
+        </div>
+        
 
-    <!-- 投信買超 -->
-    <div class="card">
-        <h2>投信買超 TOP30</h2>
 
-        <table id="trust-buy-table">
-            <thead>
-                <tr>
-                    <th>排名</th>
-                    <th>股票代號</th>
-                    <th>股票名稱</th>
-                    <th>買賣超</th>
-                </tr>
-            </thead>
-
-            <tbody></tbody>
-        </table>
-    </div>
-
-    <!-- 投信賣超 -->
-    <div class="card">
-        <h2>投信賣超 TOP30</h2>
-
-        <table id="trust-sell-table">
-            <thead>
-                <tr>
-                    <th>排名</th>
-                    <th>股票代號</th>
-                    <th>股票名稱</th>
-                    <th>買賣超</th>
-                </tr>
-            </thead>
-
-            <tbody></tbody>
-        </table>
-    </div>
-
-<script>
-
-async function loadCSV(path, tableId){
-
-    const response = await fetch(path);
-
-    const text = await response.text();
-
-    const rows = text.trim().split("\n");
-
-    const tbody = document.querySelector(`#${tableId} tbody`);
-
-    tbody.innerHTML = "";
-
-    for(let i = 1; i < rows.length; i++){
-
-        const cols = rows[i].split(",");
-
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-            <td>${i}</td>
-            <td>${cols[0] || ""}</td>
-            <td>${cols[1] || ""}</td>
-            <td>${cols[2] || ""}</td>
-        `;
-
-        tbody.appendChild(tr);
-    }
-}
-
-async function init(){
-
-    const today = "20260513";
-
-    await loadCSV(
-        `../reports/heatmap/${today}_foreign_buy_30.csv`,
-        "foreign-buy-table"
-    );
-
-    await loadCSV(
-        `../reports/heatmap/${today}_foreign_sell_30.csv`,
-        "foreign-sell-table"
-    );
-
-    await loadCSV(
-        `../reports/heatmap/${today}_trust_buy_30.csv`,
-        "trust-buy-table"
-    );
-
-    await loadCSV(
-        `../reports/heatmap/${today}_trust_sell_30.csv`,
-        "trust-sell-table"
-    );
-}
-
-init();
-
-</script>
+        <div class="card">
+            <h2>投信賣超 TOP30</h2>
+            <p>無資料</p>
+        </div>
+        
 
 </body>
 </html>
