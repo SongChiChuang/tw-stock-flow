@@ -1,95 +1,233 @@
-import os
 import pandas as pd
+from pathlib import Path
 
+OUTPUT_HTML = "docs/index.html"
 
-def generate_heatmap(
-    df,
-    date_str=None,
-    category="foreign",
-    mode=None
-):
+# =========================
+# 讀取 CSV
+# =========================
 
-    if date_str is None:
-        date_str = "unknown"
+def load_csv(path):
+    try:
+        df = pd.read_csv(path)
+        return df
+    except Exception as e:
+        print(f"❌ CSV讀取失敗: {path}")
+        print(e)
+        return pd.DataFrame()
 
-    if mode is not None:
-        category = mode
+# =========================
+# 安全取得欄位
+# =========================
 
-    os.makedirs("reports/heatmap", exist_ok=True)
+def get_value(row, columns):
+    for col in columns:
+        if col in row:
+            return row[col]
+    return ""
 
-    df.columns = df.columns.str.strip()
+# =========================
+# 建立表格 HTML
+# =========================
 
-    possible_cols = [
-        "買賣超股數",
-        "買賣超",
-        "外資買賣超股數",
-        "投信買賣超股數"
-    ]
+def build_table(title, df):
 
-    buy_col = None
+    if df.empty:
+        return f"""
+        <div class="card">
+            <h2>{title}</h2>
+            <p>無資料</p>
+        </div>
+        """
 
-    for col in possible_cols:
-        if col in df.columns:
-            buy_col = col
-            break
+    html = f"""
+    <div class="card">
+        <h2>{title}</h2>
 
-    if buy_col is None:
-        raise Exception(
-            f"找不到買賣超欄位，目前欄位：{list(df.columns)}"
-        )
+        <table>
+            <thead>
+                <tr>
+                    <th>排名</th>
+                    <th>股票代號</th>
+                    <th>股票名稱</th>
+                    <th>買賣超</th>
+                </tr>
+            </thead>
 
-    # 修正數值格式
-    df[buy_col] = (
-        df[buy_col]
-        .astype(str)
-        .str.replace(",", "", regex=False)
-        .str.replace(".0", "", regex=False)
-        .str.strip()
-    )
+            <tbody>
+    """
 
-    df[buy_col] = pd.to_numeric(
-        df[buy_col],
-        errors="coerce"
-    ).fillna(0)
+    for idx, row in df.head(30).iterrows():
 
-    buy_top30 = (
-        df.sort_values(
-            by=buy_col,
-            ascending=False
-        )
-        .head(30)
-    )
+        stock_id = get_value(row, [
+            "證券代號",
+            "股票代號"
+        ])
 
-    sell_top30 = (
-        df.sort_values(
-            by=buy_col,
-            ascending=True
-        )
-        .head(30)
-    )
+        stock_name = get_value(row, [
+            "證券名稱",
+            "股票名稱"
+        ])
 
-    buy_path = (
-        f"reports/heatmap/"
-        f"{date_str}_{category}_buy_30.csv"
-    )
+        volume = get_value(row, [
+            "買賣超股數",
+            "買賣超",
+            "買超"
+        ])
 
-    sell_path = (
-        f"reports/heatmap/"
-        f"{date_str}_{category}_sell_30.csv"
-    )
+        # 數字格式化
+        try:
+            volume = format(int(float(volume)), ",")
+        except:
+            volume = str(volume)
 
-    buy_top30.to_csv(
-        buy_path,
-        index=False,
-        encoding="utf-8-sig"
-    )
+        html += f"""
+        <tr>
+            <td>{idx + 1}</td>
+            <td>{stock_id}</td>
+            <td>{stock_name}</td>
+            <td>{volume}</td>
+        </tr>
+        """
 
-    print(f"📊 產生 {category}_buy_30")
+    html += """
+            </tbody>
+        </table>
+    </div>
+    """
 
-    sell_top30.to_csv(
-        sell_path,
-        index=False,
-        encoding="utf-8-sig"
-    )
+    return html
 
-    print(f"📊 產生 {category}_sell_30")
+# =========================
+# 主程式
+# =========================
+
+def generate_heatmap():
+
+    foreign_buy = load_csv("reports/foreign_buy_30.csv")
+    foreign_sell = load_csv("reports/foreign_sell_30.csv")
+    investment_buy = load_csv("reports/investment_buy_30.csv")
+    investment_sell = load_csv("reports/investment_sell_30.csv")
+
+    html = f"""
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>TW Stock Flow Dashboard</title>
+
+<style>
+
+body {{
+    background: #050816;
+    color: white;
+    font-family: Arial;
+    margin: 0;
+    padding: 20px;
+}}
+
+h1 {{
+    color: #00ff99;
+    font-size: 56px;
+    margin-bottom: 10px;
+}}
+
+.subtitle {{
+    color: #888;
+    margin-bottom: 40px;
+}}
+
+.card {{
+    background: #111827;
+    border-radius: 24px;
+    padding: 24px;
+    margin-bottom: 40px;
+    overflow-x: auto;
+}}
+
+h2 {{
+    font-size: 42px;
+    margin-bottom: 24px;
+}}
+
+table {{
+    width: 100%;
+    border-collapse: collapse;
+}}
+
+th {{
+    color: #00ff99;
+    font-size: 28px;
+    padding: 18px;
+    border-bottom: 1px solid #333;
+}}
+
+td {{
+    padding: 20px;
+    text-align: center;
+    border-bottom: 1px solid #222;
+    font-size: 28px;
+}}
+
+@media screen and (max-width: 768px) {{
+
+    h1 {{
+        font-size: 28px;
+    }}
+
+    h2 {{
+        font-size: 22px;
+    }}
+
+    th {{
+        font-size: 16px;
+        padding: 10px;
+    }}
+
+    td {{
+        font-size: 16px;
+        padding: 12px;
+    }}
+
+}}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>TW Stock Flow Dashboard</h1>
+
+<div class="subtitle">
+每日自動更新
+</div>
+
+{build_table("外資買超 TOP30", foreign_buy)}
+
+{build_table("外資賣超 TOP30", foreign_sell)}
+
+{build_table("投信買超 TOP30", investment_buy)}
+
+{build_table("投信賣超 TOP30", investment_sell)}
+
+</body>
+</html>
+"""
+
+    Path("docs").mkdir(exist_ok=True)
+
+    with open(OUTPUT_HTML, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    print("✅ heatmap html 生成完成")
+
+# =========================
+
+if __name__ == "__main__":
+    generate_heatmap()
