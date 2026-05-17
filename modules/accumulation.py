@@ -1,4 +1,3 @@
-```python
 # modules/accumulation.py
 # =========================
 # 外資累積買超分析（10日內 >= 8日買超）
@@ -260,4 +259,3 @@ def analyze_foreign_accumulation(
     print(f"✅ 已輸出: {output_file}")
 
     print(result_df.head())
-```
