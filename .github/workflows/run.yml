@@ -1,5 +1,5 @@
 name: Auto Run Stock System
-
+ 
 on:
   workflow_dispatch:
 
