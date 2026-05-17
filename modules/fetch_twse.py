@@ -1,3 +1,6 @@
+      # =========================
+      # 從 TWSE 抓資料
+      # =========================
 import requests
 import pandas as pd
 from io import StringIO
