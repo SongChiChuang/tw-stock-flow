@@ -1,39 +1,36 @@
-import os
-import glob
+# modules/cleanup.py
+
+from pathlib import Path
+import shutil
 
 
-def cleanup_old_files(keep=5):
+KEEP_FILES = 20
+
+
+def cleanup_old_files():
 
     print("🧹 開始資料清理")
 
-    data_dir = "data"
+    data_dir = Path("data")
+    archive_dir = Path("archive")
 
-    csv_files = sorted(
-        glob.glob(os.path.join(data_dir, "*.csv"))
-    )
+    archive_dir.mkdir(exist_ok=True)
 
-    if len(csv_files) <= keep:
+    csv_files = sorted(data_dir.glob("*.csv"))
 
-        print(f"✅ cleanup完成（封存 0 個檔案）")
+    # 保留最近20個
+    if len(csv_files) <= KEEP_FILES:
+        print("✅ 無需清理")
         return
 
-    remove_files = csv_files[:-keep]
+    old_files = csv_files[:-KEEP_FILES]
 
-    archive_dir = "archive"
+    for file in old_files:
 
-    os.makedirs(archive_dir, exist_ok=True)
+        target = archive_dir / file.name
 
-    for file in remove_files:
+        shutil.move(str(file), str(target))
 
-        filename = os.path.basename(file)
+        print(f"📦 已封存: {file.name}")
 
-        target = os.path.join(
-            archive_dir,
-            filename
-        )
-
-        os.rename(file, target)
-
-        print(f"📦 已封存: {filename}")
-
-    print(f"✅ cleanup完成（封存 {len(remove_files)} 個檔案）")
+    print("✅ cleanup完成")
