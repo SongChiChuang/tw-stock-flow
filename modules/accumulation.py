@@ -1,80 +1,53 @@
 # modules/accumulation.py
 # =========================
-# 外資累積買超分析（10日內 >= 8日買超）
+# 外資近10日累積買超分析
+# 條件：
+# 1. 全上市股票
+# 2. 最近10個交易日中 >= 8日買超
+# 3. 依累積買超排序 TOP30
 # =========================
 
 import pandas as pd
 from pathlib import Path
-from collections import defaultdict
 
 
 def analyze_foreign_accumulation(
     lookback_days=10,
-    min_buy_days=8,
-    top_n=30
+    min_buy_days=8
 ):
 
-    print(
-        f"📈 外資累積買超分析 "
-        f"（最近 {lookback_days} 日內 >= {min_buy_days} 日買超）"
-    )
-
-    # =========================
-    # 路徑
-    # =========================
+    print("📈 外資近10日累積買超分析")
 
     data_dir = Path("data")
     output_dir = Path("reports/accumulation")
 
-    output_dir.mkdir(
-        parents=True,
-        exist_ok=True
-    )
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # =========================
-    # 讀取CSV
+    # 取得最近 N 日資料
     # =========================
 
-    csv_files = sorted(
-        data_dir.glob("20*.csv")
-    )
+    csv_files = sorted(data_dir.glob("*.csv"))
 
     if len(csv_files) < lookback_days:
-
-        print(
-            f"❌ CSV檔案不足："
-            f"目前 {len(csv_files)} 份"
-        )
-
+        print("❌ CSV檔案不足")
         return
 
-    # 最近N日
     target_files = csv_files[-lookback_days:]
 
-    print(
-        "📦 使用資料:",
-        [f.name for f in target_files]
-    )
+    print("📦 使用資料：")
+    for f in target_files:
+        print("   ", f.name)
 
     # =========================
-    # 統計容器
+    # 合併所有日期資料
     # =========================
 
-    stock_buy_days = defaultdict(int)
-    stock_total_buy = defaultdict(float)
-    stock_name_map = {}
-
-    # =========================
-    # 開始分析
-    # =========================
+    all_rows = []
 
     for file in target_files:
 
         try:
-
-            # =========================
-            # 讀CSV
-            # =========================
 
             df = pd.read_csv(
                 file,
@@ -83,10 +56,7 @@ def analyze_foreign_accumulation(
 
             print(f"✅ 已讀取: {file.name}")
 
-            # =========================
-            # 欄位清理
-            # =========================
-
+            # 清理欄位
             df.columns = df.columns.str.strip()
 
             required_cols = [
@@ -98,30 +68,18 @@ def analyze_foreign_accumulation(
             for col in required_cols:
 
                 if col not in df.columns:
-
-                    print(f"❌ 缺少欄位: {col}")
-                    return
-
-            # =========================
-            # 保留必要欄位
-            # =========================
+                    raise Exception(f"缺少欄位: {col}")
 
             df = df[required_cols].copy()
 
-            # =========================
-            # 欄位改名
-            # =========================
-
+            # 改名
             df.columns = [
                 "證券代號",
                 "證券名稱",
                 "買超張數"
             ]
 
-            # =========================
-            # 數值轉換
-            # =========================
-
+            # 數值清理
             df["買超張數"] = (
                 df["買超張數"]
                 .astype(str)
@@ -133,110 +91,80 @@ def analyze_foreign_accumulation(
                 errors="coerce"
             ).fillna(0)
 
-            # =========================
-            # 只保留買超
-            # =========================
+            # 加入日期
+            df["日期"] = file.stem
 
-            df = df[
-                df["買超張數"] > 0
-            ]
-
-            # =========================
-            # 統計
-            # =========================
-
-            for _, row in df.iterrows():
-
-                stock_id = str(row["證券代號"]).strip()
-
-                stock_name = str(row["證券名稱"]).strip()
-
-                buy_amount = float(row["買超張數"])
-
-                # 買超天數 +1
-                stock_buy_days[stock_id] += 1
-
-                # 累積買超
-                stock_total_buy[stock_id] += buy_amount
-
-                # 股票名稱
-                stock_name_map[stock_id] = stock_name
+            all_rows.append(df)
 
         except Exception as e:
 
             print(f"❌ 讀取失敗 {file.name}: {e}")
-
             return
 
     # =========================
-    # 篩選 >= min_buy_days
+    # 合併資料
     # =========================
 
-    result = []
-
-    for stock_id in stock_buy_days:
-
-        buy_days = stock_buy_days[stock_id]
-
-        if buy_days >= min_buy_days:
-
-            result.append({
-
-                "證券代號": stock_id,
-
-                "證券名稱":
-                    stock_name_map.get(stock_id, ""),
-
-                "買超天數": buy_days,
-
-                "累積買超張數":
-                    int(stock_total_buy[stock_id])
-
-            })
+    combined_df = pd.concat(
+        all_rows,
+        ignore_index=True
+    )
 
     # =========================
-    # 無結果
+    # 僅保留買超
     # =========================
 
-    if len(result) == 0:
+    combined_df = combined_df[
+        combined_df["買超張數"] > 0
+    ]
+
+    # =========================
+    # 統計：
+    # 1. 買超天數
+    # 2. 累積買超
+    # =========================
+
+    grouped = combined_df.groupby(
+        ["證券代號", "證券名稱"]
+    ).agg(
+        買超天數=("日期", "nunique"),
+        累積買超=("買超張數", "sum")
+    ).reset_index()
+
+    # =========================
+    # 篩選 >= 8日買超
+    # =========================
+
+    grouped = grouped[
+        grouped["買超天數"] >= min_buy_days
+    ]
+
+    if grouped.empty:
 
         print("⚠️ 無符合條件股票")
-
         return
-
-    # =========================
-    # DataFrame
-    # =========================
-
-    result_df = pd.DataFrame(result)
 
     # =========================
     # 排序
     # =========================
 
-    result_df = result_df.sort_values(
-        by="累積買超張數",
+    grouped = grouped.sort_values(
+        by="累積買超",
         ascending=False
     )
 
-    # =========================
-    # TOP N
-    # =========================
+    # TOP30
+    grouped = grouped.head(30)
 
-    result_df = result_df.head(top_n)
-
-    # =========================
     # 排名
-    # =========================
-
-    result_df.insert(
+    grouped.insert(
         0,
         "排名",
-        range(1, len(result_df) + 1)
+        range(1, len(grouped) + 1)
     )
 
     # =========================
-    # 輸出CSV
+    # 輸出
     # =========================
 
     latest_date = target_files[-1].stem
@@ -246,16 +174,12 @@ def analyze_foreign_accumulation(
         f"{latest_date}_foreign_accumulation.csv"
     )
 
-    result_df.to_csv(
+    grouped.to_csv(
         output_file,
         index=False,
         encoding="utf-8-sig"
     )
 
-    # =========================
-    # 完成
-    # =========================
-
     print(f"✅ 已輸出: {output_file}")
 
-    print(result_df.head())
+    print(grouped.head(10))
