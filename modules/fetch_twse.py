@@ -44,16 +44,22 @@ def fetch_twse_data():
             # =========================
             # TWSE 使用 BIG5(cp950)
             # =========================
+
             response.encoding = "cp950"
 
             raw_text = response.text
 
             print("========== TWSE RAW ==========")
-            print(raw_text[:3000])
+            print(raw_text[:5000])
             print("========== END RAW ==========")
 
+            # =========================
+            # 基本檢查
+            # =========================
+
             if "證券代號" not in raw_text:
-                print("❌ 清洗後無有效資料")
+
+                print("❌ 找不到表頭")
                 time.sleep(3)
                 continue
 
@@ -65,6 +71,8 @@ def fetch_twse_data():
 
             cleaned_lines = []
 
+            header_found = False
+
             for line in lines:
 
                 line = line.strip()
@@ -72,24 +80,47 @@ def fetch_twse_data():
                 if not line:
                     continue
 
+                # 跳過分隔線
                 if line.startswith("="):
                     continue
 
+                # 找到表頭
                 if "證券代號" in line:
+
+                    header_found = True
+
                     cleaned_lines.append(line)
+
                     continue
 
-                if line.startswith('"='):
-                    cleaned_lines.append(line)
+                # 表頭後才開始收資料
+                if header_found:
+
+                    # 僅保留股票資料列
+                    if line.startswith('"='):
+                        cleaned_lines.append(line)
 
             if len(cleaned_lines) <= 1:
-                print("❌ 今日無資料")
+
+                print("❌ 清洗後無有效資料")
                 time.sleep(3)
                 continue
 
             csv_text = "\n".join(cleaned_lines)
 
-            df = pd.read_csv(StringIO(csv_text))
+            print("========== CLEAN CSV ==========")
+            print(csv_text[:3000])
+            print("========== END CLEAN ==========")
+
+            # =========================
+            # 強制指定 CSV delimiter
+            # =========================
+
+            df = pd.read_csv(
+                StringIO(csv_text),
+                sep=",",
+                engine="python"
+            )
 
             print("✅ DataFrame建立成功")
 
@@ -119,4 +150,5 @@ def fetch_twse_data():
             time.sleep(3)
 
     print("❌ 三次抓取全部失敗")
+
     return None
