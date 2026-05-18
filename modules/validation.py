@@ -9,19 +9,30 @@ def run_validation(csv_path):
 
     try:
 
+        # =========================
+        # 讀取 CSV
+        # =========================
+
         df = pd.read_csv(
             csv_path,
             encoding="utf-8-sig"
         )
 
+        print("✅ CSV讀取成功")
+
         # =========================
         # 欄位清理
         # =========================
 
-        df.columns = [
-            str(col).strip()
-            for col in df.columns
-        ]
+        cleaned_columns = []
+
+        for col in df.columns:
+
+            cleaned_columns.append(
+                str(col).strip()
+            )
+
+        df.columns = cleaned_columns
 
         print("📋 DataFrame 欄位:")
         print(df.columns.tolist())
@@ -37,12 +48,14 @@ def run_validation(csv_path):
 
         for col in required_columns:
 
-            if col not in df.columns:
+            if col not in list(df.columns):
+
                 print(f"❌ 缺少欄位: {col}")
+
                 return False
 
         # =========================
-        # 股票數量
+        # 股票數量檢查
         # =========================
 
         stock_count = len(df)
