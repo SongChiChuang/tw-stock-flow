@@ -19,13 +19,17 @@ REQUIRED_COLUMN = "證券代號"
 
 
 def fetch_twse_data():
+
     today = datetime.now().strftime("%Y%m%d")
 
     print("📅 今日交易日:", today)
 
     csv_text = None
 
-    # ========= 三次重試 =========
+    # =========================
+    # 三次重試
+    # =========================
+
     for i in range(3):
 
         print(f"🌐 第 {i+1} 次抓取")
@@ -38,9 +42,6 @@ def fetch_twse_data():
                 "User-Agent": (
                     "Mozilla/5.0 "
                     "(Windows NT 10.0; Win64; x64)"
-                    " AppleWebKit/537.36 "
-                    "(KHTML, like Gecko) "
-                    "Chrome/124.0 Safari/537.36"
                 )
             }
 
@@ -50,7 +51,11 @@ def fetch_twse_data():
                 timeout=30
             )
 
-            response.encoding="utf-8-sig"
+            # =========================
+            # 正確 encoding
+            # =========================
+
+            response.encoding = "utf-8"
 
             raw_text = response.text
 
@@ -58,25 +63,41 @@ def fetch_twse_data():
             print(raw_text[:3000])
             print("========== END RAW ==========")
 
-            # ========= 基本有效性 =========
+            # =========================
+            # 基本有效性
+            # =========================
+
             if REQUIRED_COLUMN not in raw_text:
+
                 print("❌ 原始資料不含證券代號")
+
                 time.sleep(3)
+
                 continue
 
             csv_text = raw_text
+
             break
 
         except Exception as e:
+
             print("❌ 抓取失敗:", e)
+
             time.sleep(3)
 
-    # ========= 抓不到 =========
+    # =========================
+    # 三次都失敗
+    # =========================
+
     if csv_text is None:
+
         print("❌ 三次抓取全部失敗")
+
         return None
 
-    # ========= 清洗資料 =========
+    # =========================
+    # 清洗資料
+    # =========================
 
     lines = csv_text.splitlines()
 
@@ -91,14 +112,14 @@ def fetch_twse_data():
         if not line:
             continue
 
-        # ========= 找 header =========
+        # 找 header
         if REQUIRED_COLUMN in line:
             header_found = True
 
         if not header_found:
             continue
 
-        # ========= 排除垃圾行 =========
+        # 排除垃圾行
         if line.startswith("="):
             continue
 
@@ -108,28 +129,28 @@ def fetch_twse_data():
         if "ETF證券代號" in line:
             continue
 
-        if line.startswith('"="'):
-            continue
-
         clean_lines.append(line)
 
     if len(clean_lines) <= 1:
+
         print("❌ 清洗後無有效資料")
+
         return None
 
     print("========== CLEAN CSV ==========")
     print("\n".join(clean_lines[:10]))
     print("========== END CLEAN ==========")
 
-    # ========= 建立 DataFrame =========
+    # =========================
+    # 建立 DataFrame
+    # =========================
 
     try:
 
         clean_csv = "\n".join(clean_lines)
 
         df = pd.read_csv(
-            StringIO(clean_csv),
-            encoding="utf-8-sig"
+            StringIO(clean_csv)
         )
 
         print("✅ DataFrame建立成功")
@@ -137,34 +158,49 @@ def fetch_twse_data():
     except Exception as e:
 
         print("❌ DataFrame建立失敗:", e)
+
         return None
 
-    # ========= 欄位檢查 =========
+    # =========================
+    # 欄位清理
+    # =========================
 
-    df.columns = [str(col).strip() for col in df.columns]
+    df.columns = [
+        str(col).strip()
+        for col in df.columns
+    ]
 
     print("📋 DataFrame 欄位:")
     print(df.columns.tolist())
 
     if REQUIRED_COLUMN not in df.columns:
+
         print("❌ 找不到證券代號欄位")
+
         return None
 
-    # ========= 數值欄位去逗號 =========
+    # =========================
+    # 數值欄位清理
+    # =========================
 
     for col in df.columns:
 
         try:
+
             df[col] = (
                 df[col]
                 .astype(str)
                 .str.replace(",", "", regex=False)
+                .str.replace('"', "", regex=False)
                 .str.strip()
             )
+
         except:
             pass
 
-    # ========= 排除 ETF =========
+    # =========================
+    # 排除 ETF
+    # =========================
 
     original_count = len(df)
 
@@ -174,7 +210,6 @@ def fetch_twse_data():
         "反2",
         "槓桿",
         "正2",
-        "50",
         "高股息",
         "台灣50"
     ]
@@ -193,19 +228,27 @@ def fetch_twse_data():
 
     print(f"🧹 已排除ETF/特殊商品: {removed_count}")
 
-    # ========= 股票數量檢查 =========
+    # =========================
+    # 股票數量驗證
+    # =========================
 
     print(f"📊 股票數量: {len(df)}")
 
     if len(df) < 100:
+
         print("❌ 股票數量異常過少")
+
         return None
 
-    # ========= 建立資料夾 =========
+    # =========================
+    # 建立資料夾
+    # =========================
 
     os.makedirs("data", exist_ok=True)
 
-    # ========= 儲存 CSV =========
+    # =========================
+    # 儲存 CSV
+    # =========================
 
     save_path = f"data/{today}.csv"
 
@@ -222,6 +265,7 @@ def fetch_twse_data():
     except Exception as e:
 
         print("❌ CSV儲存失敗:", e)
+
         return None
 
     return save_path
