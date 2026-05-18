@@ -30,11 +30,12 @@ ETF_KEYWORDS = [
 # =========================
 def is_stock(stock_id, stock_name=""):
 
+    # 這裡一定要有 ()
     stock_id = str(stock_id).strip()
     stock_name = str(stock_name).strip()
 
     # =========================
-    # 必須為4位數字
+    # 必須是4位數字
     # =========================
     if not re.fullmatch(r"\d{4}", stock_id):
         return False
