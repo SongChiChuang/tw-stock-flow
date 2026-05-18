@@ -9,8 +9,13 @@ from io import StringIO
 from datetime import datetime
 
 
+# =========================
+# 使用舊版 TWSE API
+# 比新版 /rwd/ 穩定
+# =========================
+
 TWSE_URL = (
-    "https://www.twse.com.tw/rwd/zh/fund/T86"
+    "https://www.twse.com.tw/fund/T86"
     "?response=csv"
     "&date={date}"
     "&selectType=ALLBUT0999"
@@ -46,7 +51,9 @@ def fetch_twse_data():
                     " AppleWebKit/537.36 "
                     "(KHTML, like Gecko) "
                     "Chrome/124.0 Safari/537.36"
-                )
+                ),
+                "Referer": "https://www.twse.com.tw/",
+                "Accept-Language": "zh-TW,zh;q=0.9"
             }
 
             # =========================
@@ -85,6 +92,18 @@ def fetch_twse_data():
             print("========== TWSE RAW ==========")
             print(raw_text[:3000])
             print("========== END RAW ==========")
+
+            # =========================
+            # 檢查是否被導向 HTML
+            # =========================
+
+            if "<html" in raw_text.lower():
+
+                print("❌ TWSE 回傳 HTML 頁面")
+
+                time.sleep(5)
+
+                continue
 
             # =========================
             # 基本有效性
