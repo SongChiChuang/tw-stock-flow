@@ -4,6 +4,7 @@ import os
 import time
 import requests
 import pandas as pd
+
 from io import StringIO
 from datetime import datetime
 
@@ -42,17 +43,39 @@ def fetch_twse_data():
                 "User-Agent": (
                     "Mozilla/5.0 "
                     "(Windows NT 10.0; Win64; x64)"
+                    " AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) "
+                    "Chrome/124.0 Safari/537.36"
                 )
             }
 
-            response = requests.get(
-                url,
-                headers=headers,
-                timeout=30
+            # =========================
+            # Session Retry
+            # =========================
+
+            session = requests.Session()
+
+            adapter = requests.adapters.HTTPAdapter(
+                max_retries=5
+            )
+
+            session.mount(
+                "https://",
+                adapter
             )
 
             # =========================
-            # TWSE 正確編碼
+            # 發送 Request
+            # =========================
+
+            response = session.get(
+                url,
+                headers=headers,
+                timeout=120
+            )
+
+            # =========================
+            # TWSE encoding
             # =========================
 
             response.encoding = "cp950"
@@ -71,11 +94,13 @@ def fetch_twse_data():
 
                 print("❌ 原始資料不含證券代號")
 
-                time.sleep(3)
+                time.sleep(5)
 
                 continue
 
             csv_text = raw_text
+
+            print("✅ 成功抓取 TWSE 資料")
 
             break
 
@@ -83,7 +108,7 @@ def fetch_twse_data():
 
             print("❌ 抓取失敗:", e)
 
-            time.sleep(3)
+            time.sleep(10)
 
     # =========================
     # 三次都失敗
@@ -112,14 +137,21 @@ def fetch_twse_data():
         if not line:
             continue
 
-        # 找 header
+        # =========================
+        # 找 Header
+        # =========================
+
         if REQUIRED_COLUMN in line:
+
             header_found = True
 
         if not header_found:
             continue
 
+        # =========================
         # 排除垃圾行
+        # =========================
+
         if "說明:" in line:
             continue
 
@@ -196,7 +228,7 @@ def fetch_twse_data():
             pass
 
     # =========================
-    # 排除 ETF
+    # 排除 ETF / 特殊商品
     # =========================
 
     original_count = len(df)
