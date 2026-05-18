@@ -4,6 +4,7 @@
 # =========================
 
 import pandas as pd
+import traceback
 
 from utils.stock_filter import is_stock
 
@@ -23,7 +24,7 @@ def run_validation(csv_path):
         print(df.columns.tolist())
 
         # =========================
-        # 欄位清理
+        # 清理欄位空白
         # =========================
         df.columns = df.columns.str.strip()
 
@@ -63,7 +64,7 @@ def run_validation(csv_path):
         print(f"🧹 已排除無效代號: {removed_count}")
 
         # =========================
-        # 股票數量驗證
+        # 股票數量
         # =========================
         stock_count = len(df)
 
@@ -77,8 +78,10 @@ def run_validation(csv_path):
 
         return True
 
-    except Exception as e:
+    except Exception:
 
-        print(f"❌ CSV讀取失敗: {e}")
+        print("❌ 完整錯誤如下：")
+
+        traceback.print_exc()
 
         return False
