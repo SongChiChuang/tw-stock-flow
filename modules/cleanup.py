@@ -1,38 +1,43 @@
 # modules/cleanup.py
-      # =========================
-      # 清理舊檔(設定20日)
-      # =========================
+
 from pathlib import Path
-import shutil
+from datetime import datetime
 
 
-KEEP_FILES = 20
+def cleanup_old_files(days=20):
 
-
-def cleanup_old_files():
-
-    print("🧹 開始資料清理")
+    print(f"🧹 開始清理 {days} 天前資料")
 
     data_dir = Path("data")
-    archive_dir = Path("archive")
 
-    archive_dir.mkdir(exist_ok=True)
+    if not data_dir.exists():
 
-    csv_files = sorted(data_dir.glob("*.csv"))
+        print("⚠️ data資料夾不存在")
 
-    # 保留最近20個
-    if len(csv_files) <= KEEP_FILES:
-        print("✅ 無需清理")
         return
 
-    old_files = csv_files[:-KEEP_FILES]
+    csv_files = sorted(
+        data_dir.glob("*.csv")
+    )
+
+    if len(csv_files) <= days:
+
+        print("✅ 無需清理")
+
+        return
+
+    old_files = csv_files[:-days]
 
     for file in old_files:
 
-        target = archive_dir / file.name
+        try:
 
-        shutil.move(str(file), str(target))
+            file.unlink()
 
-        print(f"📦 已封存: {file.name}")
+            print(f"🗑️ 已刪除: {file.name}")
 
-    print("✅ cleanup完成")
+        except Exception as e:
+
+            print(f"❌ 刪除失敗 {file.name}: {e}")
+
+    print("✅ 清理完成")
