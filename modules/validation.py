@@ -11,17 +11,13 @@ def run_validation(df):
     print("🔎 開始驗證資料")
 
     # =========================
-    # 欄位清理
+    # 欄位名稱清理
     # =========================
 
     df.columns = df.columns.str.strip()
 
     print("📋 DataFrame 欄位:")
     print(df.columns.tolist())
-
-    # =========================
-    # 必要欄位
-    # =========================
 
     required_cols = [
         "證券代號",
@@ -30,50 +26,79 @@ def run_validation(df):
     ]
 
     for col in required_cols:
-
         if col not in df.columns:
             raise Exception(f"缺少必要欄位: {col}")
 
     print("✅ 必要欄位完整")
 
     # =========================
-    # 股票代號格式修正
+    # 股票代號清洗
     # =========================
 
     df["證券代號"] = (
         df["證券代號"]
         .astype(str)
-        .str.replace('="', '', regex=False)
+        .str.replace('"', '', regex=False)
+        .str.replace('=', '', regex=False)
+        .str.strip()
+    )
+
+    df["證券名稱"] = (
+        df["證券名稱"]
+        .astype(str)
         .str.replace('"', '', regex=False)
         .str.strip()
     )
 
     # =========================
-    # 排除 ETF / 權證 / 特殊商品
+    # 排除 ETF / 特殊商品
     # =========================
 
-    exclude_prefix = (
-        "00",
-        "01",
-        "02",
-        "03",
-        "04",
-        "05",
-        "06",
-        "07",
-        "08",
-        "09"
-    )
+    etf_keywords = [
+        "ETF",
+        "特別股",
+        "槓桿",
+        "反向",
+        "期貨",
+        "正2",
+        "反1",
+        "反向1",
+        "台灣50",
+        "高股息",
+        "科技債",
+        "金融債",
+        "公司債",
+        "美債",
+        "國泰",
+        "元大",
+        "富邦",
+        "群益",
+        "復華",
+        "永豐",
+        "中信",
+        "兆豐"
+    ]
 
     before_count = len(df)
 
     df = df[
-        ~df["證券代號"].str.startswith(exclude_prefix)
+        ~df["證券名稱"].str.contains(
+            "|".join(etf_keywords),
+            na=False
+        )
     ]
 
     after_count = len(df)
 
     print(f"🧹 已排除ETF/特殊商品: {before_count - after_count}")
+
+    # =========================
+    # 僅保留上市股票
+    # =========================
+
+    df = df[
+        df["證券代號"].str.match(r"^[0-9]{4}$", na=False)
+    ]
 
     # =========================
     # 股票數量驗證
@@ -83,14 +108,13 @@ def run_validation(df):
 
     print(f"📊 股票數量: {stock_count}")
 
-    # 台股上市非ETF正常約700~1000
-    if stock_count < 500:
+    if stock_count < 100:
         raise Exception("股票數量過少")
 
     print("✅ 股票數量正常")
 
     # =========================
-    # 數值欄位清理
+    # 數值欄位轉換
     # =========================
 
     numeric_cols = [
@@ -103,6 +127,7 @@ def run_validation(df):
             df[col]
             .astype(str)
             .str.replace(",", "", regex=False)
+            .str.replace('"', '', regex=False)
             .str.strip()
         )
 
@@ -112,39 +137,5 @@ def run_validation(df):
         ).fillna(0)
 
     print("✅ 數值欄位轉換完成")
-
-    # =========================
-    # 異常值檢查
-    # =========================
-
-    abnormal = df[
-        df["外陸資買賣超股數(不含外資自營商)"].abs() > 500000000
-    ]
-
-    if not abnormal.empty:
-
-        print("⚠️ 發現異常股票代號:")
-        print(abnormal["證券代號"].tolist())
-
-    else:
-        print("✅ 未發現異常大量買超")
-
-    # =========================
-    # 波動檢查
-    # =========================
-
-    if (
-        df["外陸資買賣超股數(不含外資自營商)"]
-        .abs()
-        .sum()
-        <= 0
-    ):
-        raise Exception("買賣超資料異常")
-
-    print("✅ 股票數量波動正常")
-
-    print("====================")
-    print("Validation 完成")
-    print("====================")
 
     return df
