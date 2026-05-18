@@ -22,8 +22,6 @@ ETF_KEYWORDS = [
     "高股息",
     "科技ETF",
     "台灣50",
-    "台灣50反1",
-    "台灣50正2",
 ]
 
 
@@ -36,8 +34,7 @@ def is_stock(stock_id, stock_name=""):
     stock_name = str(stock_name).strip()
 
     # =========================
-    # 必須是4位數字
-    # 上市股票格式
+    # 必須為4位數字
     # =========================
     if not re.fullmatch(r"\d{4}", stock_id):
         return False
@@ -46,6 +43,7 @@ def is_stock(stock_id, stock_name=""):
     # 排除 ETF / 特殊商品
     # =========================
     for keyword in ETF_KEYWORDS:
+
         if keyword in stock_name:
             return False
 
