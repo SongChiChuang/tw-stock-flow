@@ -49,9 +49,13 @@ def analyze_foreign_accumulation(
 
         try:
 
+            # =========================
+            # 統一使用 UTF-8-SIG
+            # =========================
+
             df = pd.read_csv(
                 file,
-                encoding="cp950"
+                encoding="utf-8-sig"
             )
 
             print(f"✅ 已讀取: {file.name}")
@@ -79,17 +83,53 @@ def analyze_foreign_accumulation(
                 "買超張數"
             ]
 
-            # 數值清理
+            # =========================
+            # 清洗股票代號
+            # =========================
+
+            df["證券代號"] = (
+                df["證券代號"]
+                .astype(str)
+                .str.replace('"', '', regex=False)
+                .str.replace('=', '', regex=False)
+                .str.strip()
+            )
+
+            # =========================
+            # 清洗股票名稱
+            # =========================
+
+            df["證券名稱"] = (
+                df["證券名稱"]
+                .astype(str)
+                .str.replace('"', '', regex=False)
+                .str.strip()
+            )
+
+            # =========================
+            # 數值轉換
+            # =========================
+
             df["買超張數"] = (
                 df["買超張數"]
                 .astype(str)
                 .str.replace(",", "", regex=False)
+                .str.replace('"', '', regex=False)
+                .str.strip()
             )
 
             df["買超張數"] = pd.to_numeric(
                 df["買超張數"],
                 errors="coerce"
             ).fillna(0)
+
+            # =========================
+            # 只保留買超
+            # =========================
+
+            df = df[
+                df["買超張數"] > 0
+            ]
 
             # 加入日期
             df["日期"] = file.stem
@@ -109,14 +149,6 @@ def analyze_foreign_accumulation(
         all_rows,
         ignore_index=True
     )
-
-    # =========================
-    # 僅保留買超
-    # =========================
-
-    combined_df = combined_df[
-        combined_df["買超張數"] > 0
-    ]
 
     # =========================
     # 統計：
