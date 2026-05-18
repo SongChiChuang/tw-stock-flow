@@ -38,9 +38,7 @@ def run_validation(df):
     df["證券代號"] = (
         df["證券代號"]
         .astype(str)
-        .str.replace('"', '', regex=False)
-        .str.replace('=', '', regex=False)
-        .str.strip()
+        .str.extract(r"([0-9]{4,6}[A-Z]?)")[0]
     )
 
     df["證券名稱"] = (
@@ -51,12 +49,16 @@ def run_validation(df):
     )
 
     # =========================
-    # 僅保留股票代號
+    # 移除無效代號
     # =========================
 
-    df = df[
-        df["證券代號"].str.match(r"^[0-9]{4}", na=False)
-    ]
+    before_clean = len(df)
+
+    df = df[df["證券代號"].notna()]
+
+    after_clean = len(df)
+
+    print(f"🧹 已清除無效代號: {before_clean - after_clean}")
 
     # =========================
     # 排除 ETF / 特殊商品
