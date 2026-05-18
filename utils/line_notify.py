@@ -1,9 +1,16 @@
 import requests
 
 
-def send_line_message(token, user_id, message):
+def send_line_message(
+    token,
+    user_id,
+    message
+):
 
-    url = "https://api.line.me/v2/bot/message/push"
+    url = (
+        "https://api.line.me/"
+        "v2/bot/message/push"
+    )
 
     headers = {
         "Content-Type": "application/json",
@@ -20,11 +27,24 @@ def send_line_message(token, user_id, message):
         ]
     }
 
-    response = requests.post(
-        url,
-        headers=headers,
-        json=payload
-    )
+    try:
 
-    print("LINE response:", response.status_code)
-    print(response.text)
+        response = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=20
+        )
+
+        print(
+            "LINE response:",
+            response.status_code
+        )
+
+        print(response.text)
+
+    except Exception as e:
+
+        print("❌ LINE發送失敗")
+
+        print(e)
