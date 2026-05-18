@@ -52,10 +52,10 @@ def fetch_twse_data():
             )
 
             # =========================
-            # 正確 encoding
+            # TWSE 正確編碼
             # =========================
 
-            response.encoding = "utf-8"
+            response.encoding = "cp950"
 
             raw_text = response.text
 
@@ -120,9 +120,6 @@ def fetch_twse_data():
             continue
 
         # 排除垃圾行
-        if line.startswith("="):
-            continue
-
         if "說明:" in line:
             continue
 
