@@ -1,5 +1,6 @@
 # modules/fetch_twse.py
 
+import time
 import requests
 import pandas as pd
 
@@ -21,121 +22,177 @@ def fetch_twse_data():
         "&response=csv"
     )
 
-    try:
-
-        response = requests.get(
-            url,
-            timeout=30
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 "
+            "(Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 "
+            "(KHTML, like Gecko) "
+            "Chrome/136.0 Safari/537.36"
         )
+    }
 
-        response.encoding = "utf-8"
+    # =========================
+    # Retry 機制
+    # =========================
 
-        raw_text = response.text
+    for attempt in range(3):
 
-        # =========================
-        # 基本防呆
-        # =========================
+        try:
 
-        if not raw_text.strip():
+            print(f"🌐 第 {attempt + 1} 次抓取")
 
-            print("❌ TWSE回傳空資料")
-            return None
+            response = requests.get(
+                url,
+                headers=headers,
+                timeout=30
+            )
 
-        if "很抱歉" in raw_text:
+            response.encoding = "utf-8"
 
-            print("❌ 今日無交易資料")
-            return None
+            raw_text = response.text
 
-        if "<html" in raw_text.lower():
+            # =========================
+            # Debug輸出
+            # =========================
 
-            print("❌ TWSE回傳HTML")
-            return None
+            print("========== TWSE RAW ==========")
+            print(raw_text[:1000])
+            print("========== END RAW ==========")
 
-        # =========================
-        # 清洗CSV
-        # =========================
+            # =========================
+            # 基本防呆
+            # =========================
 
-        lines = raw_text.split("\n")
+            if not raw_text.strip():
 
-        cleaned_lines = []
+                print("❌ TWSE回傳空資料")
 
-        start_collect = False
-
-        for line in lines:
-
-            line = line.strip()
-
-            # 找表頭
-            if "證券代號" in line:
-
-                start_collect = True
-
-            if not start_collect:
+                time.sleep(3)
                 continue
 
-            # 跳過空行
-            if not line:
+            if "<html" in raw_text.lower():
+
+                print("❌ TWSE回傳HTML")
+
+                time.sleep(3)
                 continue
 
-            # 跳過說明文字
-            if "說明" in line:
+            if "很抱歉" in raw_text:
+
+                print("📴 今日無交易資料")
+                return None
+
+            # =========================
+            # 清洗CSV
+            # =========================
+
+            lines = raw_text.split("\n")
+
+            cleaned_lines = []
+
+            start_collect = False
+
+            for line in lines:
+
+                line = line.strip()
+
+                # 去除 BOM
+                line = line.replace("\ufeff", "")
+
+                # 找真正表頭
+                if (
+                    "證券代號" in line
+                    and "證券名稱" in line
+                ):
+                    start_collect = True
+
+                if not start_collect:
+                    continue
+
+                # 空行跳過
+                if not line:
+                    continue
+
+                # 說明文字跳過
+                if "說明" in line:
+                    continue
+
+                if "備註" in line:
+                    continue
+
+                # 非CSV跳過
+                if "," not in line:
+                    continue
+
+                cleaned_lines.append(line)
+
+            # =========================
+            # 清洗結果檢查
+            # =========================
+
+            if len(cleaned_lines) <= 1:
+
+                print("❌ 清洗後無有效資料")
+
+                time.sleep(3)
                 continue
 
-            if "備註" in line:
+            csv_text = "\n".join(cleaned_lines)
+
+            print("========== CLEAN CSV ==========")
+            print(csv_text[:1000])
+            print("========== END CSV ==========")
+
+            # =========================
+            # 讀CSV
+            # =========================
+
+            df = pd.read_csv(
+                StringIO(csv_text)
+            )
+
+            if df.empty:
+
+                print("❌ DataFrame為空")
+
+                time.sleep(3)
                 continue
 
-            # 只保留有逗號的行
-            if "," not in line:
-                continue
+            # =========================
+            # 儲存
+            # =========================
 
-            cleaned_lines.append(line)
+            output_dir = Path("data")
 
-        if len(cleaned_lines) <= 1:
+            output_dir.mkdir(
+                parents=True,
+                exist_ok=True
+            )
 
-            print("❌ 清洗後無有效資料")
-            return None
+            output_file = output_dir / f"{today}.csv"
 
-        csv_text = "\n".join(cleaned_lines)
+            df.to_csv(
+                output_file,
+                index=False,
+                encoding="cp950"
+            )
 
-        # =========================
-        # 讀取CSV
-        # =========================
+            print("✅ TWSE資料抓取成功")
+            print(f"✅ 已儲存: {output_file}")
 
-        df = pd.read_csv(
-            StringIO(csv_text)
-        )
+            return output_file
 
-        if df.empty:
+        except Exception as e:
 
-            print("❌ DataFrame為空")
-            return None
+            print(f"❌ fetch_twse_data失敗: {e}")
 
-        # =========================
-        # 儲存
-        # =========================
+            time.sleep(3)
 
-        output_dir = Path("data")
+    # =========================
+    # 最終失敗
+    # =========================
 
-        output_dir.mkdir(
-            parents=True,
-            exist_ok=True
-        )
+    print("❌ 三次抓取全部失敗")
 
-        output_file = output_dir / f"{today}.csv"
-
-        df.to_csv(
-            output_file,
-            index=False,
-            encoding="cp950"
-        )
-
-        print("✅ TWSE資料抓取成功")
-        print(f"✅ 已儲存: {output_file}")
-
-        return output_file
-
-    except Exception as e:
-
-        print(f"❌ fetch_twse_data失敗: {e}")
-
-        return None
+    return None
