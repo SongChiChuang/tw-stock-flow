@@ -4,7 +4,10 @@ import pandas as pd
 from pathlib import Path
 
 
-def analyze_foreign_accumulation():
+def analyze_foreign_accumulation(
+    lookback_days=10,
+    min_buy_days=8
+):
 
     print("📈 外資累積買超分析")
 
@@ -14,23 +17,24 @@ def analyze_foreign_accumulation():
         data_dir.glob("*.csv")
     )
 
-    if len(csv_files) < 10:
+    if len(csv_files) < lookback_days:
 
         print("❌ CSV檔案不足")
 
         return
 
-    target_files = csv_files[-10:]
+    target_files = csv_files[-lookback_days:]
+
+    print("📦 使用資料:")
+
+    for f in target_files:
+        print(f.name)
 
     all_data = []
 
     for file in target_files:
 
         try:
-
-            # =========================
-            # UTF-8-SIG
-            # =========================
 
             df = pd.read_csv(
                 file,
