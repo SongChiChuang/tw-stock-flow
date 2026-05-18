@@ -50,7 +50,7 @@ def fetch_twse_data():
                 timeout=30
             )
 
-            response.encoding = "cp950"
+            response.encoding="utf-8-sig"
 
             raw_text = response.text
 
@@ -129,7 +129,7 @@ def fetch_twse_data():
 
         df = pd.read_csv(
             StringIO(clean_csv),
-            encoding="cp950"
+            encoding="utf-8-sig"
         )
 
         print("✅ DataFrame建立成功")
