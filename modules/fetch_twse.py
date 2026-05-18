@@ -61,7 +61,7 @@ def fetch_twse_data():
             session = requests.Session()
 
             adapter = requests.adapters.HTTPAdapter(
-                max_retries=5
+                max_retries=1
             )
 
             session.mount(
@@ -70,24 +70,26 @@ def fetch_twse_data():
             )
 
             # =========================
-            # Request
+            # 開始請求
             # =========================
+
+            print("🚀 開始請求 TWSE...")
 
             response = session.get(
                 url,
                 headers=headers,
-                timeout=120
+                timeout=20
             )
 
-            print("========== RESPONSE ==========")
-            print(response.text[:1000])
-            print("========== END RESPONSE ==========")
+            print("✅ 已收到 TWSE 回應")
 
             # =========================
             # JSON
             # =========================
 
             data = response.json()
+
+            print("✅ JSON解析成功")
 
             # =========================
             # 檢查資料
@@ -97,7 +99,7 @@ def fetch_twse_data():
 
                 print("❌ JSON無 data 欄位")
 
-                time.sleep(5)
+                time.sleep(3)
 
                 continue
 
@@ -105,7 +107,7 @@ def fetch_twse_data():
 
                 print("❌ 今日無資料")
 
-                time.sleep(5)
+                time.sleep(3)
 
                 continue
 
@@ -126,7 +128,7 @@ def fetch_twse_data():
 
             print("❌ 抓取失敗:", e)
 
-            time.sleep(10)
+            time.sleep(5)
 
     # =========================
     # 三次都失敗
