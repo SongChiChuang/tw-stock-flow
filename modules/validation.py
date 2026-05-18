@@ -1,141 +1,87 @@
-# modules/validation.py
-# =========================
-# 資料驗證模組
-# =========================
+# modules/fetch_twse.py
 
+import requests
 import pandas as pd
+from io import StringIO
+from pathlib import Path
+from datetime import datetime
 
 
-def run_validation(df):
+def fetch_twse_data():
 
-    print("🔎 開始驗證資料")
-
-    # =========================
-    # 欄位名稱清理
-    # =========================
-
-    df.columns = df.columns.str.strip()
-
-    print("📋 DataFrame 欄位:")
-    print(df.columns.tolist())
-
-    required_cols = [
-        "證券代號",
-        "證券名稱",
-        "外陸資買賣超股數(不含外資自營商)"
-    ]
-
-    for col in required_cols:
-        if col not in df.columns:
-            raise Exception(f"缺少必要欄位: {col}")
-
-    print("✅ 必要欄位完整")
-
-    # =========================
-    # 股票代號清洗
-    # =========================
-
-    df["證券代號"] = (
-        df["證券代號"]
-        .astype(str)
-        .str.replace('"', '', regex=False)
-        .str.replace('=', '', regex=False)
-        .str.strip()
+    url = (
+        "https://www.twse.com.tw/rwd/zh/fund/T86"
+        "?response=csv"
     )
 
-    df["證券名稱"] = (
-        df["證券名稱"]
-        .astype(str)
-        .str.replace('"', '', regex=False)
-        .str.strip()
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
+    response = requests.get(
+        url,
+        headers=headers,
+        timeout=30
     )
 
-    # =========================
-    # 僅保留台股代號
-    # =========================
+    response.encoding = "utf-8"
 
-    df = df[
-        df["證券代號"].str.match(r"^[0-9]{4}", na=False)
-    ]
+    raw_text = response.text
 
-    # =========================
-    # 排除 ETF / 特殊商品
-    # =========================
+    print("========== TWSE RAW ==========")
 
-    etf_keywords = [
-        "ETF",
-        "特別股",
-        "槓桿",
-        "反向",
-        "期貨",
-        "正2",
-        "反1",
-        "反向1",
-        "台灣50",
-        "高股息",
-        "科技債",
-        "金融債",
-        "公司債",
-        "美債",
-        "國泰",
-        "元大",
-        "富邦",
-        "群益",
-        "復華",
-        "永豐",
-        "中信",
-        "兆豐"
-    ]
+    preview = "\n".join(raw_text.splitlines()[:20])
 
-    before_count = len(df)
+    print(preview)
 
-    df = df[
-        ~df["證券名稱"].str.contains(
-            "|".join(etf_keywords),
-            na=False
-        )
-    ]
+    print("========== END RAW ==========")
 
-    after_count = len(df)
+    lines = raw_text.splitlines()
 
-    print(f"🧹 已排除ETF/特殊商品: {before_count - after_count}")
+    cleaned_lines = []
 
-    # =========================
-    # 股票數量驗證
-    # =========================
+    start_collect = False
 
-    stock_count = len(df)
+    for line in lines:
 
-    print(f"📊 股票數量: {stock_count}")
+        line = line.strip()
 
-    if stock_count < 100:
-        raise Exception("股票數量過少")
+        if not line:
+            continue
 
-    print("✅ 股票數量正常")
+        # 找到真正表頭
+        if "證券代號" in line and "證券名稱" in line:
+            start_collect = True
 
-    # =========================
-    # 數值欄位轉換
-    # =========================
+        if start_collect:
+            cleaned_lines.append(line)
 
-    numeric_cols = [
-        "外陸資買賣超股數(不含外資自營商)"
-    ]
+    if not cleaned_lines:
+        raise Exception("TWSE無有效資料")
 
-    for col in numeric_cols:
+    csv_text = "\n".join(cleaned_lines)
 
-        df[col] = (
-            df[col]
-            .astype(str)
-            .str.replace(",", "", regex=False)
-            .str.replace('"', '', regex=False)
-            .str.strip()
-        )
+    print("========== CLEAN CSV ==========")
+    print("\n".join(cleaned_lines[:5]))
+    print("========== END CLEAN ==========")
 
-        df[col] = pd.to_numeric(
-            df[col],
-            errors="coerce"
-        ).fillna(0)
+    df = pd.read_csv(StringIO(csv_text))
 
-    print("✅ 數值欄位轉換完成")
+    print("✅ DataFrame建立成功")
+
+    today = datetime.now().strftime("%Y%m%d")
+
+    data_dir = Path("data")
+    data_dir.mkdir(exist_ok=True)
+
+    output_path = data_dir / f"{today}.csv"
+
+    df.to_csv(
+        output_path,
+        index=False,
+        encoding="utf-8-sig"
+    )
+
+    print(f"✅ 已儲存: {output_path}")
 
     return df
