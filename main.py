@@ -31,7 +31,7 @@ def main():
 
         df = pd.read_csv(
             csv_path,
-            encoding="cp950"
+            encoding="utf-8-sig"
         )
 
         print("📥 開始驗證資料")
