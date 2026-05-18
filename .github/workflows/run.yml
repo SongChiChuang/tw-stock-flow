@@ -1,20 +1,14 @@
 name: Auto Run Stock System
 
-      # =========================
-      # 定時自動跑系統
-      # =========================
 on:
   workflow_dispatch:
-
   schedule:
     - cron: "0 8 * * 1-5"
 
 permissions:
   contents: write
-
-concurrency:
-  group: stock-system
-  cancel-in-progress: false
+  pages: write
+  id-token: write
 
 jobs:
   run:
@@ -27,11 +21,9 @@ jobs:
       # =========================
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       # =========================
-      # Setup Python
+      # Python
       # =========================
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -39,14 +31,22 @@ jobs:
           python-version: "3.10"
 
       # =========================
-      # Install Dependencies
+      # Install
       # =========================
       - name: Install dependencies
         run: |
           pip install pandas requests openpyxl pytz
 
       # =========================
-      # Run Main
+      # Pull latest
+      # 必須放在 main.py 前面
+      # =========================
+      - name: Pull latest changes
+        run: |
+          git pull origin main --rebase
+
+      # =========================
+      # Run
       # =========================
       - name: Run main.py
         env:
@@ -56,22 +56,15 @@ jobs:
           python main.py
 
       # =========================
-      # Commit & Push
+      # Commit
       # =========================
       - name: Commit files
         run: |
-
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
 
-          # 同步遠端
-          git pull origin main --rebase
-
-          # 加入變更
           git add .
 
-          # Commit
           git commit -m "auto update stock data" || echo "No changes"
 
-          # Push
           git push origin main
