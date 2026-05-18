@@ -5,18 +5,16 @@ import time
 import requests
 import pandas as pd
 
-from io import StringIO
 from datetime import datetime
 
 
 # =========================
-# 使用舊版 TWSE API
-# 比新版 /rwd/ 穩定
+# TWSE JSON API
 # =========================
 
 TWSE_URL = (
-    "https://www.twse.com.tw/fund/T86"
-    "?response=csv"
+    "https://www.twse.com.tw/rwd/zh/fund/T86"
+    "?response=json"
     "&date={date}"
     "&selectType=ALLBUT0999"
 )
@@ -30,7 +28,7 @@ def fetch_twse_data():
 
     print("📅 今日交易日:", today)
 
-    csv_text = None
+    df = None
 
     # =========================
     # 三次重試
@@ -72,7 +70,7 @@ def fetch_twse_data():
             )
 
             # =========================
-            # 發送 Request
+            # Request
             # =========================
 
             response = session.get(
@@ -81,45 +79,46 @@ def fetch_twse_data():
                 timeout=120
             )
 
-            # =========================
-            # TWSE encoding
-            # =========================
-
-            response.encoding = "cp950"
-
-            raw_text = response.text
-
-            print("========== TWSE RAW ==========")
-            print(raw_text[:3000])
-            print("========== END RAW ==========")
+            print("========== RESPONSE ==========")
+            print(response.text[:1000])
+            print("========== END RESPONSE ==========")
 
             # =========================
-            # 檢查是否被導向 HTML
+            # JSON
             # =========================
 
-            if "<html" in raw_text.lower():
+            data = response.json()
 
-                print("❌ TWSE 回傳 HTML 頁面")
+            # =========================
+            # 檢查資料
+            # =========================
+
+            if "data" not in data:
+
+                print("❌ JSON無 data 欄位")
+
+                time.sleep(5)
+
+                continue
+
+            if len(data["data"]) == 0:
+
+                print("❌ 今日無資料")
 
                 time.sleep(5)
 
                 continue
 
             # =========================
-            # 基本有效性
+            # 建立 DataFrame
             # =========================
 
-            if REQUIRED_COLUMN not in raw_text:
+            df = pd.DataFrame(
+                data["data"],
+                columns=data["fields"]
+            )
 
-                print("❌ 原始資料不含證券代號")
-
-                time.sleep(5)
-
-                continue
-
-            csv_text = raw_text
-
-            print("✅ 成功抓取 TWSE 資料")
+            print("✅ DataFrame建立成功")
 
             break
 
@@ -133,79 +132,9 @@ def fetch_twse_data():
     # 三次都失敗
     # =========================
 
-    if csv_text is None:
+    if df is None:
 
         print("❌ 三次抓取全部失敗")
-
-        return None
-
-    # =========================
-    # 清洗資料
-    # =========================
-
-    lines = csv_text.splitlines()
-
-    clean_lines = []
-
-    header_found = False
-
-    for line in lines:
-
-        line = line.strip()
-
-        if not line:
-            continue
-
-        # =========================
-        # 找 Header
-        # =========================
-
-        if REQUIRED_COLUMN in line:
-
-            header_found = True
-
-        if not header_found:
-            continue
-
-        # =========================
-        # 排除垃圾行
-        # =========================
-
-        if "說明:" in line:
-            continue
-
-        if "ETF證券代號" in line:
-            continue
-
-        clean_lines.append(line)
-
-    if len(clean_lines) <= 1:
-
-        print("❌ 清洗後無有效資料")
-
-        return None
-
-    print("========== CLEAN CSV ==========")
-    print("\n".join(clean_lines[:10]))
-    print("========== END CLEAN ==========")
-
-    # =========================
-    # 建立 DataFrame
-    # =========================
-
-    try:
-
-        clean_csv = "\n".join(clean_lines)
-
-        df = pd.read_csv(
-            StringIO(clean_csv)
-        )
-
-        print("✅ DataFrame建立成功")
-
-    except Exception as e:
-
-        print("❌ DataFrame建立失敗:", e)
 
         return None
 
