@@ -1,71 +1,77 @@
-# modules/line_notify.py
+name: Auto Run Stock System
 
-import os
-import requests
+on:
+  schedule:
+    - cron: "0 10 * * 1-5"
 
+  workflow_dispatch:
 
-def send_line_message(message):
+jobs:
+  run:
 
-    print("📲 準備發送 LINE 通知")
+    runs-on: ubuntu-latest
 
-    token = os.getenv(
-        "LINE_CHANNEL_ACCESS_TOKEN"
-    )
+    steps:
 
-    user_id = os.getenv(
-        "LINE_USER_ID"
-    )
+      # =========================
+      # Checkout
+      # =========================
 
-    if not token:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-        print("❌ 找不到 LINE token")
+      # =========================
+      # Python
+      # =========================
 
-        return
+      - name: Setup Python
+        uses: actions/setup-python@v5
 
-    if not user_id:
+        with:
+          python-version: "3.10"
 
-        print("❌ 找不到 LINE user id")
+      # =========================
+      # Install
+      # =========================
 
-        return
+      - name: Install dependencies
+        run: |
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
+          python -m pip install --upgrade pip
 
-    payload = {
-        "to": user_id,
-        "messages": [
-            {
-                "type": "text",
-                "text": message
-            }
-        ]
-    }
+          pip install pandas
+          pip install requests
 
-    try:
+      # =========================
+      # Run
+      # =========================
 
-        response = requests.post(
-            "https://api.line.me/v2/bot/message/push",
-            headers=headers,
-            json=payload,
-            timeout=20
-        )
+      - name: Run main.py
 
-        print("📨 LINE Status:", response.status_code)
+        env:
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
 
-        print(response.text)
+        run: |
 
-        if response.status_code == 200:
+          python -u main.py
 
-            print("✅ LINE通知成功")
+      # =========================
+      # Commit CSV
+      # =========================
 
-        else:
+      - name: Commit files
 
-            print("❌ LINE通知失敗")
+        run: |
 
-    except Exception as e:
+          git config --global user.name "github-actions"
 
-        print("❌ LINE發送錯誤")
+          git config --global user.email "github-actions@github.com"
 
-        print(e)
+          git pull origin main --rebase
+
+          git add .
+
+          git commit -m "auto update stock data" || echo "No changes"
+
+          git push origin main
