@@ -1,17 +1,15 @@
 name: Auto Run Stock System
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: "0 8 * * 1-5"
+    - cron: "0 10 * * 1-5"
 
-permissions:
-  contents: write
-  pages: write
-  id-token: write
+  workflow_dispatch:
 
 jobs:
+
   run:
+
     runs-on: ubuntu-latest
 
     steps:
@@ -19,49 +17,60 @@ jobs:
       # =========================
       # Checkout
       # =========================
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # =========================
-      # Python
+      # Setup Python
       # =========================
+
       - name: Setup Python
         uses: actions/setup-python@v5
+
         with:
           python-version: "3.10"
 
       # =========================
-      # Install
+      # Install Dependencies
       # =========================
+
       - name: Install dependencies
+
         run: |
-          pip install pandas requests openpyxl pytz
+
+          python -m pip install --upgrade pip
+
+          pip install pandas
+          pip install requests
 
       # =========================
-      # Pull latest
-      # 必須放在 main.py 前面
+      # Run Main
       # =========================
-      - name: Pull latest changes
-        run: |
-          git pull origin main --rebase
 
-      # =========================
-      # Run
-      # =========================
       - name: Run main.py
+
         env:
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+
         run: |
-          python main.py
+
+          python -u main.py
 
       # =========================
-      # Commit
+      # Commit Files
       # =========================
+
       - name: Commit files
+
         run: |
+
           git config --global user.name "github-actions"
+
           git config --global user.email "github-actions@github.com"
+
+          git pull origin main --rebase
 
           git add .
 
