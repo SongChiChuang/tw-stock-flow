@@ -1,3 +1,11 @@
+import sys
+
+sys.stdout.reconfigure(
+    line_buffering=True
+)
+
+print("🚀 main.py 啟動")
+
 name: Auto Run Stock System
 
 on:
