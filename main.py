@@ -1,4 +1,5 @@
 import sys
+import os
 
 sys.stdout.reconfigure(
     line_buffering=True
@@ -6,80 +7,241 @@ sys.stdout.reconfigure(
 
 print("🚀 main.py 啟動")
 
-name: Auto Run Stock System
+# =========================
+# Import Modules
+# =========================
 
-on:
-  schedule:
-    - cron: "0 10 * * 1-5"
+print("📦 import fetch_twse")
+from modules.fetch_twse import fetch_twse_data
 
-  workflow_dispatch:
+print("📦 import validation")
+from modules.validation import run_validation
 
-jobs:
-  run:
+print("📦 import accumulation")
+from modules.accumulation import analyze_foreign_accumulation
 
-    runs-on: ubuntu-latest
+print("📦 import cleanup")
+from modules.cleanup import cleanup_old_files
 
-    steps:
+print("📦 import line_notify")
+from modules.line_notify import send_line_message
 
-      # =========================
-      # Checkout
-      # =========================
+print("📦 import pandas")
+import pandas as pd
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
+print("✅ 所有 import 完成")
 
-      # =========================
-      # Python
-      # =========================
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+# =========================
+# 外資 TOP30
+# =========================
 
-        with:
-          python-version: "3.10"
+def generate_foreign_top30(csv_path):
 
-      # =========================
-      # Install
-      # =========================
+    print("📊 產生外資 TOP30")
 
-      - name: Install dependencies
-        run: |
+    try:
 
-          python -m pip install --upgrade pip
+        df = pd.read_csv(
+            csv_path,
+            encoding="utf-8-sig"
+        )
 
-          pip install pandas
-          pip install requests
+        target_col = "外陸資買賣超股數(不含外資自營商)"
 
-      # =========================
-      # Run
-      # =========================
+        df[target_col] = (
+            df[target_col]
+            .astype(str)
+            .str.replace(",", "", regex=False)
+        )
 
-      - name: Run main.py
+        df[target_col] = pd.to_numeric(
+            df[target_col],
+            errors="coerce"
+        ).fillna(0)
 
-        env:
-          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
-          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+        buy_df = df.sort_values(
+            by=target_col,
+            ascending=False
+        ).head(30)
 
-        run: |
+        sell_df = df.sort_values(
+            by=target_col,
+            ascending=True
+        ).head(30)
 
-          python -u main.py
+        os.makedirs(
+            "reports/foreign",
+            exist_ok=True
+        )
 
-      # =========================
-      # Commit CSV
-      # =========================
+        file_date = os.path.basename(
+            csv_path
+        ).replace(".csv", "")
 
-      - name: Commit files
+        buy_path = (
+            f"reports/foreign/"
+            f"{file_date}_foreign_buy_top30.csv"
+        )
 
-        run: |
+        sell_path = (
+            f"reports/foreign/"
+            f"{file_date}_foreign_sell_top30.csv"
+        )
 
-          git config --global user.name "github-actions"
+        buy_df.to_csv(
+            buy_path,
+            index=False,
+            encoding="utf-8-sig"
+        )
 
-          git config --global user.email "github-actions@github.com"
+        sell_df.to_csv(
+            sell_path,
+            index=False,
+            encoding="utf-8-sig"
+        )
 
-          git pull origin main --rebase
+        print(f"✅ 已輸出: {buy_path}")
+        print(f"✅ 已輸出: {sell_path}")
 
-          git add .
+    except Exception as e:
 
-          git commit -m "auto update stock data" || echo "No changes"
+        print("❌ 外資TOP30失敗")
 
-          git push origin main
+        print(e)
+
+
+# =========================
+# 投信 TOP30
+# =========================
+
+def generate_investment_top30(csv_path):
+
+    print("📊 產生投信 TOP30")
+
+    try:
+
+        df = pd.read_csv(
+            csv_path,
+            encoding="utf-8-sig"
+        )
+
+        target_col = "投信買賣超股數"
+
+        df[target_col] = (
+            df[target_col]
+            .astype(str)
+            .str.replace(",", "", regex=False)
+        )
+
+        df[target_col] = pd.to_numeric(
+            df[target_col],
+            errors="coerce"
+        ).fillna(0)
+
+        buy_df = df.sort_values(
+            by=target_col,
+            ascending=False
+        ).head(30)
+
+        sell_df = df.sort_values(
+            by=target_col,
+            ascending=True
+        ).head(30)
+
+        os.makedirs(
+            "reports/investment",
+            exist_ok=True
+        )
+
+        file_date = os.path.basename(
+            csv_path
+        ).replace(".csv", "")
+
+        buy_path = (
+            f"reports/investment/"
+            f"{file_date}_investment_buy_top30.csv"
+        )
+
+        sell_path = (
+            f"reports/investment/"
+            f"{file_date}_investment_sell_top30.csv"
+        )
+
+        buy_df.to_csv(
+            buy_path,
+            index=False,
+            encoding="utf-8-sig"
+        )
+
+        sell_df.to_csv(
+            sell_path,
+            index=False,
+            encoding="utf-8-sig"
+        )
+
+        print(f"✅ 已輸出: {buy_path}")
+        print(f"✅ 已輸出: {sell_path}")
+
+    except Exception as e:
+
+        print("❌ 投信TOP30失敗")
+
+        print(e)
+
+
+# =========================
+# Main
+# =========================
+
+def main():
+
+    print("🚀 開始執行 main()")
+
+    csv_path = fetch_twse_data()
+
+    if csv_path is None:
+
+        print("❌ 今日無資料")
+
+        return
+
+    print("📥 開始驗證資料")
+
+    validation_result = run_validation(
+        csv_path
+    )
+
+    if validation_result is False:
+
+        print("❌ validation失敗")
+
+        return
+
+    generate_foreign_top30(csv_path)
+
+    generate_investment_top30(csv_path)
+
+    analyze_foreign_accumulation(
+        lookback_days=10,
+        min_buy_days=8
+    )
+
+    cleanup_old_files(days=20)
+
+    send_line_message(
+        os.getenv("LINE_CHANNEL_ACCESS_TOKEN"),
+        os.getenv("LINE_USER_ID"),
+        "✅ 台股資料更新成功\nTOP30已更新"
+    )
+
+    print("🎉 main.py 執行完成")
+
+
+# =========================
+# Entry
+# =========================
+
+if __name__ == "__main__":
+
+    main()
