@@ -191,6 +191,60 @@ def generate_investment_top30(csv_path):
 
 
 # =========================
+# LINE 訊息產生
+# =========================
+
+def generate_line_message(csv_path):
+
+    file_date = os.path.basename(
+        csv_path
+    ).replace(".csv", "")
+
+    base_url = (
+        "https://songchichuang.github.io/"
+        "tw-stock-flow"
+    )
+
+    foreign_buy_url = (
+        f"{base_url}/reports/foreign/"
+        f"{file_date}_foreign_buy_top30.csv"
+    )
+
+    foreign_sell_url = (
+        f"{base_url}/reports/foreign/"
+        f"{file_date}_foreign_sell_top30.csv"
+    )
+
+    investment_buy_url = (
+        f"{base_url}/reports/investment/"
+        f"{file_date}_investment_buy_top30.csv"
+    )
+
+    investment_sell_url = (
+        f"{base_url}/reports/investment/"
+        f"{file_date}_investment_sell_top30.csv"
+    )
+
+    message = f"""
+✅ 台股資料更新成功
+
+📈 外資買超TOP30
+{foreign_buy_url}
+
+📉 外資賣超TOP30
+{foreign_sell_url}
+
+🏦 投信買超TOP30
+{investment_buy_url}
+
+🏦 投信賣超TOP30
+{investment_sell_url}
+"""
+
+    return message
+
+
+# =========================
 # Main
 # =========================
 
@@ -229,11 +283,31 @@ def main():
 
     cleanup_old_files(days=20)
 
-    send_line_message(
-        os.getenv("LINE_CHANNEL_ACCESS_TOKEN"),
-        os.getenv("LINE_USER_ID"),
-        "✅ 台股資料更新成功\nTOP30已更新"
-    )
+    # =========================
+    # LINE通知
+    # =========================
+
+    try:
+
+        print("📨 準備LINE通知")
+
+        message = generate_line_message(
+            csv_path
+        )
+
+        send_line_message(
+            os.getenv("LINE_CHANNEL_ACCESS_TOKEN"),
+            os.getenv("LINE_USER_ID"),
+            message
+        )
+
+        print("✅ LINE通知成功")
+
+    except Exception as e:
+
+        print("❌ LINE通知失敗")
+
+        print(e)
 
     print("🎉 main.py 執行完成")
 
