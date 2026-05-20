@@ -1,3 +1,4 @@
+```python
 import sys
 import os
 
@@ -25,6 +26,9 @@ from modules.cleanup import cleanup_old_files
 
 print("📦 import line_notify")
 from modules.line_notify import send_line_message
+
+print("📦 import dashboard")
+from modules.dashboard import generate_dashboard
 
 print("📦 import pandas")
 import pandas as pd
@@ -191,60 +195,6 @@ def generate_investment_top30(csv_path):
 
 
 # =========================
-# LINE 訊息產生
-# =========================
-
-def generate_line_message(csv_path):
-
-    file_date = os.path.basename(
-        csv_path
-    ).replace(".csv", "")
-
-    base_url = (
-        "https://songchichuang.github.io/"
-        "tw-stock-flow"
-    )
-
-    foreign_buy_url = (
-        f"{base_url}/reports/foreign/"
-        f"{file_date}_foreign_buy_top30.csv"
-    )
-
-    foreign_sell_url = (
-        f"{base_url}/reports/foreign/"
-        f"{file_date}_foreign_sell_top30.csv"
-    )
-
-    investment_buy_url = (
-        f"{base_url}/reports/investment/"
-        f"{file_date}_investment_buy_top30.csv"
-    )
-
-    investment_sell_url = (
-        f"{base_url}/reports/investment/"
-        f"{file_date}_investment_sell_top30.csv"
-    )
-
-    message = f"""
-✅ 台股資料更新成功
-
-📈 外資買超TOP30
-{foreign_buy_url}
-
-📉 外資賣超TOP30
-{foreign_sell_url}
-
-🏦 投信買超TOP30
-{investment_buy_url}
-
-🏦 投信賣超TOP30
-{investment_sell_url}
-"""
-
-    return message
-
-
-# =========================
 # Main
 # =========================
 
@@ -272,14 +222,32 @@ def main():
 
         return
 
+    # =========================
+    # TOP30
+    # =========================
+
     generate_foreign_top30(csv_path)
 
     generate_investment_top30(csv_path)
+
+    # =========================
+    # Dashboard
+    # =========================
+
+    generate_dashboard(csv_path)
+
+    # =========================
+    # 外資累積分析
+    # =========================
 
     analyze_foreign_accumulation(
         lookback_days=10,
         min_buy_days=8
     )
+
+    # =========================
+    # Cleanup
+    # =========================
 
     cleanup_old_files(days=20)
 
@@ -291,13 +259,24 @@ def main():
 
         print("📨 準備LINE通知")
 
-        message = generate_line_message(
-            csv_path
+        dashboard_url = (
+            "https://songchichuang.github.io/"
+            "tw-stock-flow/"
+        )
+
+        message = (
+            "✅ 台股資料更新成功\n\n"
+            "📊 Dashboard:\n"
+            f"{dashboard_url}"
         )
 
         send_line_message(
-            os.getenv("LINE_CHANNEL_ACCESS_TOKEN"),
-            os.getenv("LINE_USER_ID"),
+            os.getenv(
+                "LINE_CHANNEL_ACCESS_TOKEN"
+            ),
+            os.getenv(
+                "LINE_USER_ID"
+            ),
             message
         )
 
@@ -319,3 +298,4 @@ def main():
 if __name__ == "__main__":
 
     main()
+```
