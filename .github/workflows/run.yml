@@ -43,6 +43,7 @@ jobs:
 
           pip install pandas
           pip install requests
+          pip install matplotlib
 
       # =========================
       # Run Main
