@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 def generate_streak_chart():
 
-    print("📈 產生外資連續買超圖表")
+    print("📈 產生外資五日強勢排行榜")
 
     try:
 
@@ -17,7 +17,6 @@ def generate_streak_chart():
         if not os.path.exists(csv_path):
 
             print("❌ 找不到 foreign_streak_top30.csv")
-
             return
 
         df = pd.read_csv(
@@ -28,7 +27,6 @@ def generate_streak_chart():
         if len(df) == 0:
 
             print("❌ 無資料")
-
             return
 
         top20 = df.head(20)
@@ -38,31 +36,70 @@ def generate_streak_chart():
             exist_ok=True
         )
 
-        plt.figure(
-            figsize=(12, 8)
+        fig, ax = plt.subplots(
+            figsize=(16, 10)
         )
 
-        labels = (
-            top20["證券名稱"]
-            + "("
-            + top20["證券代號"].astype(str)
-            + ")"
-        )
+        ax.axis("off")
 
-        plt.barh(
-            labels,
-            top20["總買超量"]
+        title = (
+            "Foreign Buy Streak Ranking"
         )
 
         plt.title(
-            "Foreign Buy Streak Top20"
+            title,
+            fontsize=20,
+            pad=20
         )
 
-        plt.xlabel(
-            "Total Buy Volume"
+        table_data = []
+
+        for _, row in top20.iterrows():
+
+            table_data.append([
+
+                row["排名"],
+                row["證券代號"],
+                row["證券名稱"],
+                row["日期權重"],
+                row["上榜次數"],
+                row["最近連續"],
+                f"{int(row['五日總買超']):,}"
+
+            ])
+
+        table = ax.table(
+
+            cellText=table_data,
+
+            colLabels=[
+
+                "Rank",
+                "Code",
+                "Name",
+                "Date",
+                "Count",
+                "Streak",
+                "Volume"
+
+            ],
+
+            loc="center"
+
         )
 
-        plt.tight_layout()
+        table.auto_set_font_size(
+            False
+        )
+
+        table.set_fontsize(
+            10
+        )
+
+        table.scale(
+            1.2,
+            1.8
+        )
 
         save_path = (
             "docs/images/"
@@ -71,7 +108,7 @@ def generate_streak_chart():
 
         plt.savefig(
             save_path,
-            dpi=200,
+            dpi=250,
             bbox_inches="tight"
         )
 
@@ -84,5 +121,4 @@ def generate_streak_chart():
     except Exception as e:
 
         print("❌ 圖表產生失敗")
-
         print(e)
