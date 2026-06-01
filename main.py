@@ -20,6 +20,9 @@ from modules.validation import run_validation
 print("📦 import accumulation")
 from modules.accumulation import analyze_foreign_accumulation
 
+print("📦 import foreign_streak")
+from modules.foreign_streak import analyze_foreign_streak
+
 print("📦 import cleanup")
 from modules.cleanup import cleanup_old_files
 
