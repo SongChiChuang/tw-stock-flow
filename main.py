@@ -32,9 +32,6 @@ from modules.line_notify import send_line_message
 print("📦 import dashboard")
 from modules.dashboard import generate_dashboard
 
-print("📦 import foreign_streak")
-from modules.foreign_streak import analyze_foreign_streak
-
 print("📦 import pandas")
 import pandas as pd
 
