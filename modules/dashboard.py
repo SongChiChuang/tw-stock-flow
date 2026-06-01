@@ -259,21 +259,6 @@ td {{
 {streak_html}
 </div>
 
-<div class="card">
-<h2>外資五日連續買超排行榜</h2>
-
-<img
-src="images/foreign_streak_top30.png"
-style="
-width:100%;
-border-radius:20px;
-background:white;
-padding:10px;
-"
-/>
-
-</div>
-
 </body>
 </html>
 """
