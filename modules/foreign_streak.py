@@ -1,186 +1,198 @@
-# modules/foreign_streak.py
-
 import os
 import pandas as pd
 
 from glob import glob
 
-
 def analyze_foreign_streak():
 
-    print("🔥 外資連續買超分析")
+print("🔥 外資連續買超分析")
 
-    # =========================
-    # 最近五日 TOP30
-    # =========================
+# =========================
+# 最近五日 TOP30
+# =========================
 
-    files = sorted(
-        glob(
-            "reports/foreign/*_foreign_buy_top30.csv"
-        )
+files = sorted(
+    glob(
+        "reports/foreign/*_foreign_buy_top30.csv"
     )
+)
 
-    if len(files) < 5:
+if len(files) < 5:
 
-        print("❌ TOP30資料不足")
+    print("❌ TOP30資料不足")
+
+    return
+
+target_files = files[-5:]
+
+print("📦 使用檔案:")
+
+for f in target_files:
+    print(os.path.basename(f))
+
+# =========================
+# 日期權重
+# =========================
+
+date_weights = {
+    0: 1,
+    1: 2,
+    2: 3,
+    3: 4,
+    4: 5
+}
+
+stock_data = {}
+
+# =========================
+# 讀取五日資料
+# =========================
+
+for idx, file in enumerate(target_files):
+
+    try:
+
+        df = pd.read_csv(
+            file,
+            encoding="utf-8-sig"
+        )
+
+        weight = date_weights[idx]
+
+        for _, row in df.iterrows():
+
+            stock_id = str(row["證券代號"])
+
+            stock_name = str(row["證券名稱"])
+
+            volume = float(
+                str(row["外資買賣超股數"])
+                .replace(",", "")
+            )
+
+            if stock_id not in stock_data:
+
+                stock_data[stock_id] = {
+                    "證券代號": stock_id,
+                    "證券名稱": stock_name,
+                    "日期權重": 0,
+                    "上榜次數": 0,
+                    "五日總買超": 0,
+                    "days": []
+                }
+
+            stock_data[stock_id]["日期權重"] += weight
+
+            stock_data[stock_id]["上榜次數"] += 1
+
+            stock_data[stock_id]["五日總買超"] += volume
+
+            stock_data[stock_id]["days"].append(idx)
+
+    except Exception as e:
+
+        print(f"❌ 讀取失敗 {file}")
+
+        print(e)
 
         return
 
-    target_files = files[-5:]
+# =========================
+# 最近連續天數
+# =========================
 
-    print("📦 使用檔案:")
+result = []
 
-    for f in target_files:
-        print(os.path.basename(f))
+for stock_id, info in stock_data.items():
 
-    # =========================
-    # 日期權重
-    # =========================
+    days = sorted(info["days"])
 
-    date_weights = {
-        0: 1,
-        1: 2,
-        2: 3,
-        3: 4,
-        4: 5
-    }
+    streak = 0
 
-    stock_data = {}
+    current = 4
+
+    while current in days:
+
+        streak += 1
+        current -= 1
 
     # =========================
-    # 讀取五日資料
+    # 軌跡
     # =========================
 
-    for idx, file in enumerate(target_files):
+    track = ""
 
-        try:
+    for i in range(5):
 
-            df = pd.read_csv(
-                file,
-                encoding="utf-8-sig"
-            )
+        if i in days:
+            track += "●"
+        else:
+            track += "○"
 
-            weight = date_weights[idx]
+    result.append({
 
-            for _, row in df.iterrows():
+        "證券代號": info["證券代號"],
+        "證券名稱": info["證券名稱"],
 
-                stock_id = str(row["證券代號"])
+        "軌跡": track,
 
-                stock_name = str(row["證券名稱"])
+        "日期權重": info["日期權重"],
+        "上榜次數": info["上榜次數"],
+        "最近連續": streak,
 
-                volume = float(
-                    str(row["外資買賣超股數"])
-                    .replace(",", "")
-                )
+        "熱度": "★" * streak,
 
-                if stock_id not in stock_data:
+        "五日總買超": int(
+            info["五日總買超"]
+        )
+    })
 
-                    stock_data[stock_id] = {
-                        "證券代號": stock_id,
-                        "證券名稱": stock_name,
-                        "日期權重": 0,
-                        "上榜次數": 0,
-                        "五日總買超": 0,
-                        "days": []
-                    }
+# =========================
+# DataFrame
+# =========================
 
-                stock_data[stock_id]["日期權重"] += weight
+result_df = pd.DataFrame(result)
 
-                stock_data[stock_id]["上榜次數"] += 1
+result_df = result_df.sort_values(
+    by=[
+        "日期權重",
+        "上榜次數",
+        "最近連續",
+        "五日總買超"
+    ],
+    ascending=False
+)
 
-                stock_data[stock_id]["五日總買超"] += volume
+result_df = result_df.head(30)
 
-                stock_data[stock_id]["days"].append(idx)
+# =========================
+# 排名
+# =========================
 
-        except Exception as e:
+result_df.insert(
+    0,
+    "排名",
+    range(1, len(result_df) + 1)
+)
 
-            print(f"❌ 讀取失敗 {file}")
+# =========================
+# 輸出
+# =========================
 
-            print(e)
+os.makedirs(
+    "reports/streak",
+    exist_ok=True
+)
 
-            return
+output_path = (
+    "reports/streak/"
+    "foreign_streak_top30.csv"
+)
 
-    # =========================
-    # 最近連續天數
-    # =========================
+result_df.to_csv(
+    output_path,
+    index=False,
+    encoding="utf-8-sig"
+)
 
-    result = []
-
-    for stock_id, info in stock_data.items():
-
-        days = sorted(info["days"])
-
-        streak = 0
-
-        current = 4
-
-        while current in days:
-
-            streak += 1
-            current -= 1
-
-        result.append({
-
-       "證券代號": info["證券代號"],
-       "證券名稱": info["證券名稱"],
-
-       "日期權重": info["日期權重"],
-       "上榜次數": info["上榜次數"],
-       "最近連續": streak,
-
-       "熱度": "★" * streak,
-
-       "五日總買超": int(
-        info["五日總買超"]
-    )
-        })
-
-    # =========================
-    # DataFrame
-    # =========================
-
-    result_df = pd.DataFrame(result)
-
-    result_df = result_df.sort_values(
-        by=[
-            "日期權重",
-            "上榜次數",
-            "最近連續",
-            "五日總買超"
-        ],
-        ascending=False
-    )
-
-    result_df = result_df.head(30)
-
-    # =========================
-    # 排名
-    # =========================
-
-    result_df.insert(
-        0,
-        "排名",
-        range(1, len(result_df) + 1)
-    )
-
-    # =========================
-    # 輸出
-    # =========================
-
-    os.makedirs(
-        "reports/streak",
-        exist_ok=True
-    )
-
-    output_path = (
-        "reports/streak/"
-        "foreign_streak_top30.csv"
-    )
-
-    result_df.to_csv(
-        output_path,
-        index=False,
-        encoding="utf-8-sig"
-    )
-
-    print(f"✅ 已輸出: {output_path}")
+print(f"✅ 已輸出: {output_path}")
