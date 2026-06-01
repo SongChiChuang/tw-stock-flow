@@ -1,4 +1,4 @@
-```yaml
+
 name: Auto Run Stock System
 
 on:
@@ -79,4 +79,4 @@ jobs:
           git commit -m "auto update stock data" || echo "No changes"
 
           git push origin main
-```
+
