@@ -1,3 +1,4 @@
+```yaml
 name: Auto Run Stock System
 
 on:
@@ -71,9 +72,11 @@ jobs:
 
           git config --global user.email "github-actions@github.com"
 
+          git pull origin main --rebase
+
           git add .
 
           git commit -m "auto update stock data" || echo "No changes"
 
           git push origin main
-
+```
