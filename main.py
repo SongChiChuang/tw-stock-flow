@@ -32,6 +32,9 @@ from modules.line_notify import send_line_message
 print("📦 import dashboard")
 from modules.dashboard import generate_dashboard
 
+print("📦 import streak_chart")
+from modules.streak_chart import generate_streak_chart
+
 print("📦 import pandas")
 import pandas as pd
 
@@ -311,6 +314,8 @@ def main():
     # =========================
 
     generate_dashboard(csv_path)
+
+    generate_streak_chart()
 
     # =========================
     # 外資累積分析
