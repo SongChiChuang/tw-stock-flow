@@ -1,3 +1,4 @@
+
 import pandas as pd
 import os
 
@@ -6,10 +7,6 @@ def dataframe_to_html(df):
 
     html = "<table>"
 
-    # =========================
-    # Header
-    # =========================
-
     html += "<tr>"
 
     for col in df.columns:
@@ -17,10 +14,6 @@ def dataframe_to_html(df):
         html += f"<th>{col}</th>"
 
     html += "</tr>"
-
-    # =========================
-    # Rows
-    # =========================
 
     for _, row in df.iterrows():
 
@@ -71,6 +64,11 @@ def generate_dashboard(csv_path):
             f"{file_date}_investment_sell_top30.csv"
         )
 
+        streak_path = (
+            "reports/streak/"
+            "foreign_streak_top30.csv"
+        )
+
         # =========================
         # 讀CSV
         # =========================
@@ -95,6 +93,19 @@ def generate_dashboard(csv_path):
             encoding="utf-8-sig"
         )
 
+        if os.path.exists(streak_path):
+
+            streak_df = pd.read_csv(
+                streak_path,
+                encoding="utf-8-sig"
+            )
+
+        else:
+
+            streak_df = pd.DataFrame({
+                "訊息": ["尚無資料"]
+            })
+
         # =========================
         # 轉HTML
         # =========================
@@ -113,6 +124,10 @@ def generate_dashboard(csv_path):
 
         investment_sell_html = dataframe_to_html(
             investment_sell
+        )
+
+        streak_html = dataframe_to_html(
+            streak_df
         )
 
         # =========================
@@ -237,6 +252,11 @@ td {{
 <div class="card">
 <h2>投信賣超 TOP30</h2>
 {investment_sell_html}
+</div>
+
+<div class="card">
+<h2>🔥 外資持續熱度榜</h2>
+{streak_html}
 </div>
 
 </body>
