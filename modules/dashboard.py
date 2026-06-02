@@ -1,4 +1,3 @@
-
 import pandas as pd
 import os
 
@@ -10,7 +9,6 @@ def dataframe_to_html(df):
     html += "<tr>"
 
     for col in df.columns:
-
         html += f"<th>{col}</th>"
 
     html += "</tr>"
@@ -20,7 +18,6 @@ def dataframe_to_html(df):
         html += "<tr>"
 
         for value in row:
-
             html += f"<td>{value}</td>"
 
         html += "</tr>"
@@ -70,12 +67,12 @@ def generate_dashboard(csv_path):
         )
 
         accumulation_path = (
-        "reports/accumulation/"
-        "foreign_accumulation_top30.csv"
+            "reports/accumulation/"
+            "foreign_accumulation_top30.csv"
         )
-        
+
         # =========================
-        # 讀CSV
+        # 讀取CSV
         # =========================
 
         foreign_buy = pd.read_csv(
@@ -98,6 +95,10 @@ def generate_dashboard(csv_path):
             encoding="utf-8-sig"
         )
 
+        # =========================
+        # 熱度榜
+        # =========================
+
         if os.path.exists(streak_path):
 
             streak_df = pd.read_csv(
@@ -111,21 +112,25 @@ def generate_dashboard(csv_path):
                 "訊息": ["尚無資料"]
             })
 
-if os.path.exists(accumulation_path):
-
-    accumulation_df = pd.read_csv(
-        accumulation_path,
-        encoding="utf-8-sig"
-    )
-
-else:
-
-    accumulation_df = pd.DataFrame({
-        "訊息": ["尚無資料"]
-    })
-        
         # =========================
-        # 轉HTML
+        # 累積籌碼榜
+        # =========================
+
+        if os.path.exists(accumulation_path):
+
+            accumulation_df = pd.read_csv(
+                accumulation_path,
+                encoding="utf-8-sig"
+            )
+
+        else:
+
+            accumulation_df = pd.DataFrame({
+                "訊息": ["尚無資料"]
+            })
+
+        # =========================
+        # HTML
         # =========================
 
         foreign_buy_html = dataframe_to_html(
@@ -149,12 +154,8 @@ else:
         )
 
         accumulation_html = dataframe_to_html(
-        accumulation_df
+            accumulation_df
         )
-    
-        # =========================
-        # HTML
-        # =========================
 
         html = f"""
 <!DOCTYPE html>
@@ -308,5 +309,4 @@ td {{
     except Exception as e:
 
         print("❌ Dashboard生成失敗")
-
         print(e)
