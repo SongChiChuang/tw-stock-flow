@@ -69,6 +69,11 @@ def generate_dashboard(csv_path):
             "foreign_streak_top30.csv"
         )
 
+        accumulation_path = (
+        "reports/accumulation/"
+        "foreign_accumulation_top30.csv"
+        )
+        
         # =========================
         # 讀CSV
         # =========================
@@ -106,6 +111,19 @@ def generate_dashboard(csv_path):
                 "訊息": ["尚無資料"]
             })
 
+        if os.path.exists(accumulation_path):
+
+        accumulation_df = pd.read_csv(
+        accumulation_path,
+        encoding="utf-8-sig"
+        )
+
+        else:
+
+        accumulation_df = pd.DataFrame({
+        "訊息": ["尚無資料"]
+        })
+        
         # =========================
         # 轉HTML
         # =========================
@@ -130,6 +148,10 @@ def generate_dashboard(csv_path):
             streak_df
         )
 
+        accumulation_html = dataframe_to_html(
+        accumulation_df
+        )
+    
         # =========================
         # HTML
         # =========================
@@ -257,6 +279,11 @@ td {{
 <div class="card">
 <h2>🔥 外資持續熱度榜</h2>
 {streak_html}
+</div>
+
+<div class="card">
+<h2>🟦 外資累積籌碼榜</h2>
+{accumulation_html}
 </div>
 
 </body>
