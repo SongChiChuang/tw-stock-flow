@@ -111,18 +111,18 @@ def generate_dashboard(csv_path):
                 "訊息": ["尚無資料"]
             })
 
-        if os.path.exists(accumulation_path):
+if os.path.exists(accumulation_path):
 
-        accumulation_df = pd.read_csv(
+    accumulation_df = pd.read_csv(
         accumulation_path,
         encoding="utf-8-sig"
-        )
+    )
 
-        else:
+else:
 
-        accumulation_df = pd.DataFrame({
+    accumulation_df = pd.DataFrame({
         "訊息": ["尚無資料"]
-        })
+    })
         
         # =========================
         # 轉HTML
