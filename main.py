@@ -321,10 +321,8 @@ def main():
     # 外資累積分析
     # =========================
 
-    analyze_foreign_accumulation(
-        lookback_days=10,
-        min_buy_days=8
-    )
+    analyze_foreign_accumulation()
+    
     
     # =========================
     # 外資累積籌碼分析
