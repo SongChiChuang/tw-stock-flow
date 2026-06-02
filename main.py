@@ -23,6 +23,11 @@ from modules.accumulation import analyze_foreign_accumulation
 print("📦 import foreign_streak")
 from modules.foreign_streak import analyze_foreign_streak
 
+print("📦 import foreign_accumulation")
+from modules.foreign_accumulation import (
+    analyze_foreign_accumulation
+)
+
 print("📦 import cleanup")
 from modules.cleanup import cleanup_old_files
 
@@ -320,6 +325,12 @@ def main():
         lookback_days=10,
         min_buy_days=8
     )
+    
+    # =========================
+    # 外資累積籌碼分析
+    # =========================
+
+    analyze_foreign_accumulation()
 
     # =========================
     # Cleanup
